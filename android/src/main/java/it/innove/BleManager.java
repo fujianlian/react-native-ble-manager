@@ -11,14 +11,33 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.util.Log;
+import android.widget.Toast;
+
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
 import org.json.JSONException;
 
+import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.text.SimpleDateFormat;
 import java.util.*;
+
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.BleLog;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.BlePeripheral;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.BlePeripheralSettings;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.BleScanner;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.DiscoverPeripheral;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.ErrorCode;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.GattStatusCode;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.GattUUID;
+import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.StateInfo;
 
 import static android.app.Activity.RESULT_OK;
 import static android.os.Build.VERSION_CODES.LOLLIPOP;

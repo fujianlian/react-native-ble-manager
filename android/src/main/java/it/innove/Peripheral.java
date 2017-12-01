@@ -87,6 +87,8 @@ public class Peripheral extends BluetoothGattCallback {
 			} else
 				callback.invoke("BluetoothGatt is null");
 		}
+
+
 	}
 
 	public void disconnect() {
