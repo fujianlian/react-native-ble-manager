@@ -11,10 +11,19 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
+import android.util.Base64;
+
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.WritableMap;
+
+import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import it.innove.BleManager;
+
 
 public class DiscoverPeripheral implements Parcelable {
 
@@ -43,6 +52,10 @@ public class DiscoverPeripheral implements Parcelable {
     private long mPreviousTime;
     private long mUpdateTime;
     private List<BleAdvertiseData> mAdvertiseDataList;
+
+    //===================
+
+    //==========================
 
     public DiscoverPeripheral(@NonNull final BluetoothDevice bluetoothDevice, final int rssi, final byte[] scanRecord) {
         mBluetoothDevice = bluetoothDevice;
@@ -155,5 +168,30 @@ public class DiscoverPeripheral implements Parcelable {
         b.putLong(PARCEL_EXTRA_PREVIOUS_TIME, mPreviousTime);
         b.putLong(PARCEL_EXTRA_UPDATE_TIME, mUpdateTime);
         dest.writeBundle(b);
+    }
+    //=====================================
+
+    public WritableMap asWritableMap() {
+
+        WritableMap map = Arguments.createMap();
+
+        try {
+            map.putString("name", mBluetoothDevice.getName());
+            map.putString("id", mBluetoothDevice.getAddress()); // mac address
+            map.putMap("advertising", byteArrayToWritableMap(mScanRecord));
+            map.putInt("rssi", mCurrentRssi);
+        } catch (Exception e) { // this shouldn't happen
+            e.printStackTrace();
+        }
+
+        return map;
+    }
+
+    static WritableMap byteArrayToWritableMap(byte[] bytes) throws JSONException {
+        WritableMap object = Arguments.createMap();
+        object.putString("CDVType", "ArrayBuffer");
+        object.putString("data", Base64.encodeToString(bytes, Base64.NO_WRAP));
+        object.putArray("bytes", BleManager.bytesToWritableArray(bytes));
+        return object;
     }
 }

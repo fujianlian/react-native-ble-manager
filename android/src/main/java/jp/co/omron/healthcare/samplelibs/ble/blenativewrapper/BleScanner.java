@@ -27,28 +27,35 @@ import android.os.ParcelUuid;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.facebook.react.bridge.WritableMap;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import it.innove.BleManager;
+
 public class BleScanner {
 
     @NonNull
     private final ScanHandler mHandler;
 
-    public BleScanner(@NonNull Context context) {
-        this(context, null);
+    private BleManager bleManager;
+
+    public BleScanner(@NonNull Context context, BleManager bleManager ) {
+        this(context, null, bleManager);
     }
 
-    public BleScanner(@NonNull Context context, @Nullable Looper looper) {
+    public BleScanner(@NonNull Context context, @Nullable Looper looper, BleManager bleManager) {
         if (null == looper) {
             HandlerThread thread = new HandlerThread("BleScannerThread");
             thread.start();
             looper = thread.getLooper();
         }
-        mHandler = new ScanHandler(looper, context);
+        this.bleManager = bleManager;
+        mHandler = new ScanHandler(looper, context, bleManager);
     }
 
     public void destroy() {
@@ -122,9 +129,13 @@ public class BleScanner {
         private ScanCallback mScanCallback;
         private ScanListener mScanListener;
 
-        public ScanHandler(@NonNull Looper looper, @NonNull Context context) {
+        //==================
+        private BleManager bleManager;
+
+        public ScanHandler(@NonNull Looper looper, @NonNull Context context, BleManager bleManager) {
             super(looper);
             mContext = context;
+            this.bleManager = bleManager;
             BluetoothManager bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
             mBluetoothAdapter = bluetoothManager.getAdapter();
             mContext.registerReceiver(mBluetoothStateChangedBroadcastReceiver,
@@ -211,7 +222,13 @@ public class BleScanner {
                         } else {
                             discoverPeripheral = new DiscoverPeripheral(bluetoothDevice, rssi, scanRecord);
                             mLastDiscoverPeripherals.put(discoverPeripheral.getAddress(), discoverPeripheral);
+
+                           //====================
+                            WritableMap map = discoverPeripheral.asWritableMap();
+
+                            this.bleManager.sendEvent("BleManagerDiscoverPeripheral", map);
                         }
+
                     }
                     if (null != mScanListener) {
                         mScanListener.onScan(discoverPeripheral);

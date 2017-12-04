@@ -155,7 +155,7 @@ class BleManager  {
       });
     });
   }
-
+  
   scanAndConnect(serviceUUIDs,peripheralId) {
     return new Promise((fulfill, reject) => {
       bleManager.scanAndConnect(serviceUUIDs, peripheralId, (error) => {
@@ -167,7 +167,8 @@ class BleManager  {
       });
     });
   }
-
+  
+  
   scan(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
     return new Promise((fulfill, reject) => {
       if (allowDuplicates == null) {
@@ -199,7 +200,7 @@ class BleManager  {
       });
     });
   }
-
+  
   onlyScan(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
     return new Promise((fulfill, reject) => {
       if (allowDuplicates == null) {

@@ -44,7 +44,7 @@ import static android.os.Build.VERSION_CODES.LOLLIPOP;
 import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
 
 
-class BleManager extends ReactContextBaseJavaModule implements ActivityEventListener {
+public class BleManager extends ReactContextBaseJavaModule implements ActivityEventListener {
 
 	public static final String LOG_TAG = "logs";
 	private static final int ENABLE_REQUEST = 539;
@@ -77,6 +77,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		this.reactContext = reactContext;
 		reactContext.addActivityEventListener(this);
 		Log.d(LOG_TAG, "BleManager created");
+
 	}
 
 	@Override
@@ -118,6 +119,9 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 			scanManager = new LegacyScanManager(reactContext, this);
 		}
 
+        //add=======================
+        mBleScanner = new BleScanner(reactContext, this);
+        //add=======================end
 		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
 		filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
 		context.registerReceiver(mReceiver, filter);
@@ -162,7 +166,21 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		}
 
 		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
+		//============================start=======================================
+       /* mIsBluetoothOn = isBluetoothEnabled();
+        mHandler = new Handler();
+        //  mListenerRef = new WeakReference<>((OnEventListener) activity);
+
+        mRefreshInterval = 500;
+
+        mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[serviceUUIDs.size()]);
+        mBleScanner.startScan(mUUIDs, 0 *//* no timeout *//*, mScanListener);
+
+        mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);*/
+		//============================end=======================================
+ 
 	}
+
 
 	@ReactMethod
 	public void stopScan(Callback callback) {
@@ -204,6 +222,9 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 		callback.invoke("Create bond request fail");
 	}
 
+
+
+
 	@ReactMethod
 	public void connect(String peripheralUUID, Callback callback) {
 		Log.d(LOG_TAG, "Connect to: " + peripheralUUID);
@@ -213,7 +234,29 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 			callback.invoke("Invalid peripheral uuid");
 			return;
 		}
-		peripheral.connect(callback, getCurrentActivity());
+        //原来的链接方式
+//    	peripheral.connect(callback, getCurrentActivity());
+//        scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
+        int tempInt = scanList.size();
+        for(int i=0;i<tempInt;i++){
+            DiscoverPeripheral dp = scanList.get(i);
+
+            if(dp.getAddress().equals(peripheralUUID)){
+                Log.d(LOG_TAG, "peripheralUUID miao :"+peripheralUUID);
+                onConnect( callback, dp);
+            }
+        }
+
+		//=====================add start=========================
+//		BleLog.e(" onConnect =============start=========miao");
+//		DiscoverPeripheral discoverPeripheral = data.getParcelableExtra(EXTRA_CONNECT_REQUEST_PERIPHERAL);
+//		if (null == discoverPeripheral) {
+//			enableBluetoothCallback.invoke("discoverPeripheral is null");
+//			return;
+//		}
+//		BleLog.e(" onConnect =============start=========miao");
+// 		onConnect(discoverPeripheral);
+//=====================add end=========================
 	}
 
 	@ReactMethod
@@ -524,6 +567,7 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 			}
 			enableBluetoothCallback = null;
 		}
+
 	}
 
 	@Override
@@ -543,7 +587,837 @@ class BleManager extends ReactContextBaseJavaModule implements ActivityEventList
 				peripherals.put(peripheralUUID, peripheral);
 			}
 		}
+
+
 		return peripheral;
 	}
 
+//====================================================================
+
+
+	private BleScanner mBleScanner;
+	private WeakReference<OnEventListener> mListenerRef;
+
+	private UUID[] mUUIDs = null;
+	private Handler mHandler;
+	private int mRefreshInterval = 500;
+    private List<DiscoverPeripheral> scanList = null;
+    private BlePeripheral mTargetPeripheral;
+    private BleCommunicationExecutor mBleCommunicationExecutor;
+    private boolean mIsCtsWritten;
+
+	private final Runnable mScanResultRefreshRunnable = new Runnable() {
+		@Override
+		public void run() {
+			List<DiscoverPeripheral> scanResultList = mBleScanner.getScanResults();
+            scanList = scanResultList;
+            Log.d(LOG_TAG, "Request scanResultList  miao : " + scanResultList);
+//			mBleScanAdapter.setList(scanResultList);
+
+
+
+
+
+    		mHandler.postDelayed(this, mRefreshInterval);
+		}
+	};
+
+	private final BleScanner.ScanListener mScanListener = new BleScanner.ScanListener() {
+		@Override
+		public void onScanStarted() {
+			// nop
+		}
+
+		@Override
+		public void onScanStartFailure(BleScanner.Reason reason) {
+//			AppLog.e("Start scan failed. reason:" + reason);
+//			OnEventListener eventListener = mListenerRef.get();
+//			if (eventListener != null) {
+//				eventListener.onScanStartFailure(reason);
+//			}
+		}
+
+		@Override
+		public void onScanStopped(@NonNull BleScanner.Reason reason) {
+//			AppLog.i("Scan stopped. reason:" + reason);
+//			OnEventListener eventListener = mListenerRef.get();
+//			if (eventListener != null) {
+//				eventListener.onScanStopped(reason);
+//			}
+		}
+
+		@Override
+		public void onScan(@NonNull DiscoverPeripheral discoverPeripheral) {
+			// nop
+		}
+	};
+
+@ReactMethod
+public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Callback callback) {
+    mIsBluetoothOn = isBluetoothEnabled();
+    mHandler = new Handler();
+
+    mRefreshInterval = 500;
+
+    mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[0]);
+
+    mBleScanner.startScan(mUUIDs, 0 /* no timeout */, mScanListener);
+    mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
+
+//    startScan
+
+    int tempInt = scanList.size();
+    for(int i=0;i<tempInt;i++){
+        DiscoverPeripheral dp = scanList.get(i);
+
+        if(dp.getAddress().equals(peripheralUUID)){
+            Log.d(LOG_TAG, "peripheralUUID miao :"+peripheralUUID);
+            onConnect( callback, dp);
+        }
+    }
+}
+
+    @ReactMethod
+    public void onlyScan(ReadableArray serviceUUIDs, final int scanSeconds, boolean allowDuplicates, ReadableMap options, Callback callback) {
+        /*
+    	public void scan(ReadableArray serviceUUIDs, final int scanSeconds, boolean allowDuplicates, ReadableMap options, Callback callback) {
+    	*/
+        Log.d(LOG_TAG, "scan");
+        if (getBluetoothAdapter() == null) {
+            Log.d(LOG_TAG, "No bluetooth support");
+            callback.invoke("No bluetooth support");
+            return;
+        }
+        if (!getBluetoothAdapter().isEnabled())
+            return;
+
+        for (Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
+            Map.Entry<String, Peripheral> entry = iterator.next();
+            if (!entry.getValue().isConnected()) {
+                iterator.remove();
+            }
+        }
+        //============================start=======================================
+        mIsBluetoothOn = isBluetoothEnabled();
+        mHandler = new Handler();
+    //  mListenerRef = new WeakReference<>((OnEventListener) activity);
+
+        mRefreshInterval = 500;
+
+        mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[serviceUUIDs.size()]);
+        mBleScanner.startScan(mUUIDs, 0 /* no timeout */, mScanListener);
+
+        mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
+
+    }
+
+	public static final String EXTRA_CONNECT_REQUEST_PERIPHERAL = "extra_connect_request_peripheral";
+	private Handler mMessageHandler;
+    private static final int INDICATION_WAIT_TIME = 1000 * 10;
+    private boolean mIsBluetoothOn;
+
+	protected void onConnect(Callback callback, @NonNull DiscoverPeripheral discoverPeripheral) {
+		BleLog.e(" onConnect ======================miao");
+			mMessageHandler = new Handler() {
+			public void handleMessage(Message msg) {
+				onReceiveMessage(msg);
+			}
+		};
+
+		BlePeripheral blePeripheral = new BlePeripheral(context, discoverPeripheral);
+
+		blePeripheral.connect(new BlePeripheral.ActionReceiver() {
+			@Override
+			public void didDisconnection(@NonNull String address) {
+				mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.DidDisconnection.ordinal()));
+			}
+
+			@Override
+			public void onCharacteristicChanged(@NonNull String address, @NonNull BluetoothGattCharacteristic characteristic) {
+				if (GattUUID.Characteristic.BloodPressureMeasurementCharacteristic.getUuid().equals(characteristic.getUuid())) {
+					mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.BPMDataRcv.ordinal(), characteristic.getValue()));
+				} else if (GattUUID.Characteristic.WeightMeasurementCharacteristic.getUuid().equals(characteristic.getUuid())) {
+					mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.WMDataRcv.ordinal(), characteristic.getValue()));
+				} else if (GattUUID.Characteristic.BatteryLevelCharacteristic.getUuid().equals(characteristic.getUuid())) {
+					mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.BatteryDataRcv.ordinal(), characteristic.getValue()));
+				} else if (GattUUID.Characteristic.CurrentTimeCharacteristic.getUuid().equals(characteristic.getUuid())) {
+					mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.CTSDataRcv.ordinal(), characteristic.getValue()));
+				}
+			}
+		}, new BlePeripheral.ConnectionListener() {
+			@Override
+			public void onComplete(@NonNull String address, ErrorCode errorCode) {
+				if (null == errorCode) {
+					mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.ConnectionCompleted.ordinal()));
+				} else {
+					mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.ConnectionFailed.ordinal(), errorCode));
+				}
+			}
+		}, new StateInfo.StateMonitor() {
+			@Override
+			public void onBondStateChanged(@NonNull StateInfo.BondState bondState) {
+				mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.BondStateChanged.ordinal(), bondState));
+			}
+
+			@Override
+			public void onAclConnectionStateChanged(@NonNull StateInfo.AclConnectionState aclConnectionState) {
+				mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.AclConnectionStateChanged.ordinal(), aclConnectionState));
+			}
+
+			@Override
+			public void onGattConnectionStateChanged(@NonNull StateInfo.GattConnectionState gattConnectionState) {
+				mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.GattConnectionStateChanged.ordinal(), gattConnectionState));
+			}
+
+			@Override
+			public void onConnectionStateChanged(@NonNull StateInfo.ConnectionState connectionState) {
+
+			}
+
+			@Override
+			public void onDetailedStateChanged(@NonNull StateInfo.DetailedState detailedState) {
+				mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.DetailedStateChanged.ordinal(), detailedState));
+			}
+		});
+
+        mTargetPeripheral = blePeripheral;
+
+        mBleCommunicationExecutor = new BleCommunicationExecutor(mTargetPeripheral, new Handler() {
+            public void handleMessage(Message msg) {
+                onBleCommunicationComplete(msg);
+            }
+        });
+        mIsCtsWritten = false;
+
+	}
+
+    private void onBleCommunicationComplete(Message msg) {
+        BleEvent.Type type = BleEvent.Type.values()[msg.what];
+        final Object[] objects = (Object[]) msg.obj;
+        final BluetoothGattCharacteristic characteristic = (BluetoothGattCharacteristic) objects[0];
+        final int gattStatus = (int) objects[1];
+        final ErrorCode errorCode = (ErrorCode) objects[2];
+        if (null != errorCode) {
+            BleLog.e("ble event error. " + errorCode.name());
+
+//            disconnect(mTargetPeripheral, DisconnectReason.CommunicationError);
+            return;
+        }
+//        AppLog.d(type.name());
+        switch (type) {
+            case SetNotification: {
+                if (GattStatusCode.GATT_SUCCESS != gattStatus) {
+//                    AppLog.e("Invalid gatt status. status:" + gattStatus);
+//                    disconnect(mTargetPeripheral, DisconnectReason.GattStatusError);
+                    break;
+                }
+                mBleCommunicationExecutor.exec();
+                break;
+            }
+            case SetIndication: {
+                if (GattStatusCode.GATT_SUCCESS != gattStatus) {
+//                    AppLog.e("Invalid gatt status. status:" + gattStatus);
+//                    disconnect(mTargetPeripheral, DisconnectReason.GattStatusError);
+                    break;
+                }
+                mBleCommunicationExecutor.exec();
+                if (mTargetPeripheral.getStateInfo().isBonded()) {
+                    // The IndicationWaitTimer will start when both of indication of
+                    // BPM or WM is registered and in Bonded state.The timer will start when the state is Bonded
+                    // because indication of BPM or WM is running in Bonded state.
+                    startIndicationWaitTimer();
+                }
+                break;
+            }
+            case WriteCharacteristic: {
+                if (GattUUID.Characteristic.CurrentTimeCharacteristic.getUuid().equals(characteristic.getUuid())) {
+                    mIsCtsWritten = true;
+                    if (GattStatusCode.GATT_SUCCESS == gattStatus) {
+                        mBleCommunicationExecutor.exec();
+                    } else if (GattStatusCode.GATT_NO_RESOURCES == gattStatus) {   // 0x80: Write Request Rejected
+//                        AppLog.i("Write Request Rejected. (0x80)");
+                        // If the slave sends error response in CTS,
+                        // you don't retry and should send next request.
+                        mBleCommunicationExecutor.exec();
+                    } else if (GattStatusCode.GATT_ERROR == gattStatus) {   // 0x85: Write Request Rejected
+//                        AppLog.w("Write Request Rejected. (0x85)");
+                        // The status, 0x80 (Data filed ignored) will be notified same status to the application
+                        // but there are cases when notified other status, 0x85 to the application in some smartphones.
+                        // So the application need to regard as 0x80 only for Current Time Characteristic.
+                        mBleCommunicationExecutor.exec();
+                    } else {
+//                        AppLog.e("Invalid gatt status. status:" + gattStatus);
+//                        disconnect(mTargetPeripheral, DisconnectReason.GattStatusError);
+                    }
+                } else {
+                    if (GattStatusCode.GATT_SUCCESS == gattStatus) {
+                        mBleCommunicationExecutor.exec();
+                    } else {
+//                        AppLog.e("Invalid gatt status. status:" + gattStatus);
+//                        disconnect(mTargetPeripheral, DisconnectReason.GattStatusError);
+                    }
+                }
+                break;
+            }
+            case ReadCharacteristic: {
+                if (GattStatusCode.GATT_SUCCESS != gattStatus) {
+//                    AppLog.e("Invalid gatt status. status:" + gattStatus);
+//                    disconnect(mTargetPeripheral, DisconnectReason.GattStatusError);
+                    break;
+                }
+                if (GattUUID.Characteristic.BloodPressureFeatureCharacteristic.getUuid().equals(characteristic.getUuid())) {
+                    mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.BPFDataRcv.ordinal(), characteristic.getValue()));
+                }
+                if (GattUUID.Characteristic.WeightScaleFeatureCharacteristic.getUuid().equals(characteristic.getUuid())) {
+                    mMessageHandler.sendMessage(Message.obtain(mMessageHandler, MessageType.WSFDataRcv.ordinal(), characteristic.getValue()));
+                }
+                mBleCommunicationExecutor.exec();
+                break;
+            }
+        }
+    }
+
+	protected void onReceiveMessage(Message msg) {
+		MessageType messageType = MessageType.values()[msg.what];
+
+		BleLog.e(" messageType"+messageType);
+        switch (messageType) {
+            case BluetoothOff:
+                mIsBluetoothOn = false;
+
+                break;
+            case BluetoothOn:
+                mIsBluetoothOn = true;
+
+                break;
+            case ConnectionCompleted:
+                BleLog.e("Connect to " + mTargetPeripheral.getLocalName() + "(" + mTargetPeripheral.getAddress() + ")");
+                startCommunication();
+                break;
+            case BondStateChanged:
+                StateInfo.BondState bondState = (StateInfo.BondState) msg.obj;
+
+                if (mTargetPeripheral.getStateInfo().isConnected() && StateInfo.BondState.Bonded == bondState) {
+                    // The IndicationWaitTimer will start when both of indication of
+                    // BPM or WM is registered and in Bonded state. The timer will startwhen the state is Bonded
+                    // because indication of BPM or WM is running in no Nonded state.
+                    startIndicationWaitTimer();
+                }
+                break;
+            case AclConnectionStateChanged:
+                StateInfo.AclConnectionState aclConnectionState = (StateInfo.AclConnectionState) msg.obj;
+                BleLog.e("Connect to aclConnectionState" + aclConnectionState + "(" + mTargetPeripheral.getAddress() + ")");
+                break;
+            case GattConnectionStateChanged:
+                StateInfo.GattConnectionState gattConnectionState = (StateInfo.GattConnectionState) msg.obj;
+                BleLog.e("Connect to gattConnectionState" + gattConnectionState + "(" + mTargetPeripheral.getAddress() + ")");
+                break;
+            case DetailedStateChanged:
+                BleLog.e("miao mIsBluetoothOn" + mIsBluetoothOn + "(" + mTargetPeripheral.getAddress() + ")");
+                if (mIsBluetoothOn) {
+                    StateInfo.DetailedState detailedState = (StateInfo.DetailedState) msg.obj;
+                    BleLog.e("Connect to detailedState" + detailedState + "(" + mTargetPeripheral.getAddress() + ")");
+                    WritableMap map = Arguments.createMap();
+                    map.putString("state", detailedState.name());
+                    Log.d(LOG_TAG, "state: " + detailedState);
+                    sendEvent("BleManagerDidUpdateState", map);
+
+                }
+                break;
+            case BatteryDataRcv:
+                byte[] batteryData = (byte[]) msg.obj;
+                int batteryLevel = batteryData[0];
+
+                BleLog.e("Battery Level Data:" + batteryLevel);
+                break;
+            case CTSDataRcv:
+                byte[] ctsData = (byte[]) msg.obj;
+                byte[] buf = new byte[2];
+                System.arraycopy(ctsData, 0, buf, 0, 2);
+                ByteBuffer ctsYearByteBuffer = ByteBuffer.wrap(buf);
+                ctsYearByteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                int ctsYear = ctsYearByteBuffer.getShort();
+                int ctsMonth = ctsData[2];
+                int ctsDay = ctsData[3];
+                int ctsHour = ctsData[4];
+                int ctsMinute = ctsData[5];
+                int ctsSecond = ctsData[6];
+                byte AdjustReason = ctsData[9];
+                String ctsTime = String.format(Locale.US,
+                        "%1$04d-%2$02d-%3$02d %4$02d:%5$02d:%6$02d",
+                        ctsYear, ctsMonth, ctsDay, ctsHour, ctsMinute, ctsSecond);
+
+                BleLog.e("CTS Data:" + ctsTime + " (AdjustReason:" + AdjustReason + ")");
+
+                if (!mIsCtsWritten) {
+                    BleLog.d("Write CTS");
+                    BluetoothGattCharacteristic characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.CurrentTimeCharacteristic.getUuid());
+                    if (null == characteristic) {
+                        BleLog.e("null == characteristic");
+                        break;
+                    }
+                    byte[] currentTimeData = getCurrentTimeData();
+
+                    mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.WriteCharacteristic, characteristic));
+                    if (!mBleCommunicationExecutor.isExecuting()) {
+                        mBleCommunicationExecutor.exec();
+                    }
+                }
+                break;
+            case BPMDataRcv:
+                restartIndicationWaitTimer();
+
+                getBPMDataRcv(msg);
+
+                break;
+            case WMDataRcv:
+                restartIndicationWaitTimer();
+
+                getWMDataRcv(msg);
+
+                break;
+            case IndicationWaitTimeout:
+                BleLog.e("Indication wait timeout.");
+//                disconnect(mTargetPeripheral, DisconnectReason.IndicationWaitTimeout);
+                break;
+            default:
+                break;
+        }
+	}
+
+    private void getWMDataRcv(Message msg){
+        byte[] data;
+        byte[] buf = new byte[2];
+
+        data = (byte[]) msg.obj;
+        System.arraycopy(data, 0, buf, 0, 2);
+        ByteBuffer bpfByteBuffer = ByteBuffer.wrap(buf);
+        bpfByteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        short bpfVal = bpfByteBuffer.getShort();
+        String bpfStr = String.format(Locale.US, "%1$04x", (short) bpfVal);
+        BleLog.e("Blood Pressure Feature Data:" + bpfStr);
+    }
+
+
+    private void getBPMDataRcv(Message msg){
+        byte[] data;
+        byte[] buf = new byte[2];
+        ByteBuffer byteBuffer;
+        int idx = 0;
+        data = (byte[]) msg.obj;
+
+        byte flags = data[idx++];
+
+        // 0: mmHg	1: kPa
+        boolean kPa = (flags & 0x01) > 0;
+        // 0: No Timestamp info 1: With Timestamp info
+        boolean timestampFlag = (flags & 0x02) > 0;
+        // 0: No PlseRate info 1: With PulseRate info
+        boolean pulseRateFlag = (flags & 0x04) > 0;
+        // 0: No UserID info 1: With UserID info
+        boolean userIdFlag = (flags & 0x08) > 0;
+        // 0: No MeasurementStatus info 1: With MeasurementStatus info
+        boolean measurementStatusFlag = (flags & 0x10) > 0;
+
+        // Set BloodPressureMeasurement unit
+        String unit;
+        if (kPa) {
+            unit = "kPa";
+        } else {
+            unit = "mmHg";
+        }
+
+        // Parse Blood Pressure Measurement
+        short systolicVal = 0;
+        short diastolicVal = 0;
+        short meanApVal = 0;
+
+        System.arraycopy(data, idx, buf, 0, 2);
+        idx += 2;
+        byteBuffer = ByteBuffer.wrap(buf);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        systolicVal = byteBuffer.getShort();
+
+        System.arraycopy(data, idx, buf, 0, 2);
+        idx += 2;
+        byteBuffer = ByteBuffer.wrap(buf);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        diastolicVal = byteBuffer.getShort();
+
+        System.arraycopy(data, idx, buf, 0, 2);
+        idx += 2;
+        byteBuffer = ByteBuffer.wrap(buf);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        meanApVal = byteBuffer.getShort();
+
+        BleLog.e("systolicValue:" + systolicVal + " " + unit);
+        BleLog.e("diastolicValue:" + diastolicVal + " " + unit);
+        BleLog.e("meanApValue:" + meanApVal + " " + unit);
+
+//                mSystolicView.setText(Float.toString(systolicVal) + " " + unit);
+//                mDiastolicView.setText(Float.toString(diastolicVal) + " " + unit);
+//                mMeanApView.setText(Float.toString(meanApVal) + " " + unit);
+
+        // Parse Timestamp
+        String timestampStr = "----";
+        String dateStr = "--";
+        String timeStr = "--";
+        if (timestampFlag) {
+            System.arraycopy(data, idx, buf, 0, 2);
+            idx += 2;
+            byteBuffer = ByteBuffer.wrap(buf);
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+
+            int year = byteBuffer.getShort();
+            int month = data[idx++];
+            int day = data[idx++];
+            int hour = data[idx++];
+            int min = data[idx++];
+            int sec = data[idx++];
+
+            dateStr = String.format(Locale.US, "%1$04d-%2$02d-%3$02d", year, month, day);
+            timeStr = String.format(Locale.US, "%1$02d:%2$02d:%3$02d", hour, min, sec);
+            timestampStr = dateStr + " " + timeStr;
+            BleLog.e("Timestamp Data:" + timestampStr);
+        }
+//                mTimestampView.setText(timestampStr);
+
+        // Parse PulseRate
+        short pulseRateVal = 0;
+        String pulseRateStr = "----";
+        if (pulseRateFlag) {
+            System.arraycopy(data, idx, buf, 0, 2);
+            idx += 2;
+            byteBuffer = ByteBuffer.wrap(buf);
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            pulseRateVal = byteBuffer.getShort();
+            pulseRateStr = Short.toString(pulseRateVal);
+            BleLog.e("PulseRate Data:" + pulseRateStr);
+        }
+//                mPulseRateView.setText(pulseRateStr);
+
+        // Parse UserID
+        int userIDVal = 0;
+        String userIDStr = "----";
+        if (userIdFlag) {
+            userIDVal = data[idx++];
+            userIDStr = String.valueOf(userIDVal);
+            BleLog.e("UserID Data:" + userIDStr);
+        }
+//                mUserIDView.setText(userIDStr);
+
+        // Parse Measurement Status
+        int measurementStatusVal = 0;
+        String measurementStatusStr = "----";
+        if (measurementStatusFlag) {
+            System.arraycopy(data, idx, buf, 0, 2);
+            idx += 2;
+            byteBuffer = ByteBuffer.wrap(buf);
+            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+            measurementStatusVal = byteBuffer.getShort();
+            measurementStatusStr = String.format(Locale.US, "%1$04x", (short) measurementStatusVal);
+            BleLog.e("MeasurementStatus Data:" + measurementStatusStr);
+
+//                    mBodyMovementView.setText((measurementStatusVal & 0x0001) == 0 ? "No" : "Yes");
+//                    mIrregularPulseView.setText((measurementStatusVal & 0x0004) == 0 ? "No" : "Yes");
+        } else {
+//                    mBodyMovementView.setText("----");
+//                    mIrregularPulseView.setText("----");
+        }
+
+        // Output to History
+        BleLog.e("Add history");
+        String entry = timestampStr
+                + "," + systolicVal
+                + "," + diastolicVal
+                + "," + meanApVal
+                + "," + pulseRateStr
+                + "," + String.format(Locale.US, "%1$02x", flags)
+                + "," + measurementStatusStr;
+//
+//                HistoryData hd = (HistoryData) this.getApplication();
+//                hd.add(HistoryData.SERV_BLS, entry);
+
+        // Output log for data aggregation
+        // AppLog format: ## For aggregation ## timestamp(date), timestamp(time), systolic, diastolic, meanAP, current date time
+        Calendar c = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String agg = "## For aggregation ## ";
+        agg += dateStr + "," + timeStr;
+        agg += "," + systolicVal + "," + diastolicVal + "," + meanApVal;
+        agg += "," + sdf.format(c.getTime());
+        BleLog.e(agg);
+
+        WritableMap map = Arguments.createMap();
+        map.putString("entry", entry);
+        Log.d(LOG_TAG, "entry:BPMDataRcv " + entry);
+        sendEvent("BleManagerBPMDataRcv", map);
+
+    }
+
+    private void stopIndicationWaitTimer() {
+        BleLog.dMethodIn();
+        mMessageHandler.removeMessages(MessageType.IndicationWaitTimeout.ordinal());
+    }
+
+    private void restartIndicationWaitTimer() {
+        stopIndicationWaitTimer();
+        startIndicationWaitTimer();
+    }
+
+	protected enum MessageType {
+		BluetoothOff,
+		BluetoothOn,
+		ConnectionCompleted,
+		ConnectionFailed,
+		DisconnectionCompleted,
+		DidDisconnection,
+		Disconnected,
+		BondStateChanged,
+		AclConnectionStateChanged,
+		GattConnectionStateChanged,
+		DetailedStateChanged,
+		BPFDataRcv,
+		BPMDataRcv,
+		WMDataRcv,
+		WSFDataRcv,
+		BatteryDataRcv,
+		CTSDataRcv,
+		// The waiting time-out message for receiving Indication.
+		// After Indication Enable setting, this message will be
+		// displayed when not receive the Indication in the prescribed time
+		// This is a solution of the  problem in some models. (The  Indication is received in OS level
+		// but the OS would return the Indication Confirmation without notification to the app).
+		IndicationWaitTimeout,
+		UNKNOWN
+	}
+    private enum DisconnectReason {
+        UserRequest,
+        CommunicationError,
+        GattStatusError,
+        IndicationWaitTimeout,
+    }
+
+	public interface OnEventListener {
+		void onScanStartFailure(BleScanner.Reason reason);
+
+		void onScanStopped(BleScanner.Reason reason);
+
+		void onConnectRequest(DiscoverPeripheral discoverPeripheral);
+	}
+
+    private static class BleEvent {
+        public final Type type;
+        public final BluetoothGattCharacteristic characteristic;
+
+        public BleEvent(Type type, BluetoothGattCharacteristic characteristic) {
+            this.type = type;
+            this.characteristic = characteristic;
+        }
+
+        public enum Type {
+            SetNotification, SetIndication, WriteCharacteristic, ReadCharacteristic
+        }
+    }
+
+    private static class BleCommunicationExecutor {
+        private final LinkedList<BleEvent> mBleEventList = new LinkedList<>();
+        private final BlePeripheral mTargetPeripheral;
+        private final Handler mCompletionHandler;
+        private boolean mExecuting;
+
+        BleCommunicationExecutor(BlePeripheral targetPeripheral, Handler completionHandler) {
+            mTargetPeripheral = targetPeripheral;
+            mCompletionHandler = completionHandler;
+            mExecuting = false;
+        }
+
+        public boolean isExecuting() {
+            return mExecuting;
+        }
+
+        public void add(BleEvent bleEvent) {
+            mBleEventList.add(bleEvent);
+        }
+
+        public void clear() {
+            mBleEventList.clear();
+        }
+
+        public boolean exec() {
+            if (mBleEventList.isEmpty()) {
+
+                return false;
+            }
+            if (mExecuting) {
+
+                return false;
+            }
+            final BleEvent bleEvent = mBleEventList.poll();
+            final BluetoothGattCharacteristic characteristic = bleEvent.characteristic;
+
+            switch (bleEvent.type) {
+                case SetNotification:
+                    mTargetPeripheral.setNotificationEnabled(characteristic, true, new BlePeripheral.SetNotificationResultListener() {
+                        @Override
+                        public void onComplete(@NonNull String address, BluetoothGattCharacteristic characteristic, int gattStatus, ErrorCode errorCode) {
+                            mExecuting = false;
+                            Object[] objects = {characteristic, gattStatus, errorCode};
+                            mCompletionHandler.sendMessage(Message.obtain(mCompletionHandler, bleEvent.type.ordinal(), objects));
+                        }
+                    });
+                    break;
+                case SetIndication:
+                    mTargetPeripheral.setNotificationEnabled(characteristic, true, new BlePeripheral.SetNotificationResultListener() {
+                        @Override
+                        public void onComplete(@NonNull String address, BluetoothGattCharacteristic characteristic, int gattStatus, ErrorCode errorCode) {
+                            mExecuting = false;
+                            Object[] objects = {characteristic, gattStatus, errorCode};
+                            mCompletionHandler.sendMessage(Message.obtain(mCompletionHandler, bleEvent.type.ordinal(), objects));
+                        }
+                    });
+                    break;
+                case WriteCharacteristic:
+                    mTargetPeripheral.writeCharacteristic(characteristic, new BlePeripheral.WriteCharacteristicResultListener() {
+                        @Override
+                        public void onComplete(@NonNull String address, BluetoothGattCharacteristic characteristic, int gattStatus, ErrorCode errorCode) {
+                            mExecuting = false;
+                            Object[] objects = {characteristic, gattStatus, errorCode};
+                            mCompletionHandler.sendMessage(Message.obtain(mCompletionHandler, bleEvent.type.ordinal(), objects));
+                        }
+                    });
+                    break;
+                case ReadCharacteristic:
+                    mTargetPeripheral.readCharacteristic(characteristic, new BlePeripheral.ReadCharacteristicResultListener() {
+                        @Override
+                        public void onComplete(@NonNull String address, BluetoothGattCharacteristic characteristic, int gattStatus, ErrorCode errorCode) {
+                            mExecuting = false;
+                            Object[] objects = {characteristic, gattStatus, errorCode};
+                            mCompletionHandler.sendMessage(Message.obtain(mCompletionHandler, bleEvent.type.ordinal(), objects));
+                        }
+                    });
+                    break;
+            }
+            mExecuting = true;
+            return true;
+        }
+    }
+
+    private void startCommunication() {
+
+        BluetoothGattCharacteristic characteristic;
+        if (null != (characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.BatteryLevelCharacteristic.getUuid()))) {
+
+            BleLog.e(" [LOG]Battery Service is discovered");
+            mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.SetNotification, characteristic));
+        }
+        if (null != (characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.CurrentTimeCharacteristic.getUuid()))) {
+
+            BleLog.e("[LOG]Current Time Service is discovered");
+            mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.SetNotification, characteristic));
+        }
+        if (null != (characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.BloodPressureMeasurementCharacteristic.getUuid()))) {
+
+            BleLog.e("[LOG]Blood Pressure Service is discovered");
+            mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.SetIndication, characteristic));
+        }
+        if (null != (characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.WeightMeasurementCharacteristic.getUuid()))) {
+
+            BleLog.e("[LOG]Weight Scale Service is discovered");
+            mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.SetIndication, characteristic));
+        }
+        if (null != (characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.BloodPressureFeatureCharacteristic.getUuid()))) {
+            mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.ReadCharacteristic, characteristic));
+        }
+        if (null != (characteristic = mTargetPeripheral.getCharacteristic(GattUUID.Characteristic.WeightScaleFeatureCharacteristic.getUuid()))) {
+            mBleCommunicationExecutor.add(new BleEvent(BleEvent.Type.ReadCharacteristic, characteristic));
+        }
+        mBleCommunicationExecutor.exec();
+    }
+
+    private void startIndicationWaitTimer() {
+        BleLog.dMethodIn();
+        mMessageHandler.sendMessageDelayed(Message.obtain(mMessageHandler,
+                MessageType.IndicationWaitTimeout.ordinal()), INDICATION_WAIT_TIME);
+    }
+    private byte[] getCurrentTimeData() {
+        byte[] data = new byte[10];
+        Calendar cal = Calendar.getInstance();
+        int year = cal.get(Calendar.YEAR);
+        data[0] = (byte) year;
+        data[1] = (byte) ((year >> 8) & 0xFF);
+        data[2] = (byte) (cal.get(Calendar.MONTH) + 1);
+        data[3] = (byte) cal.get(Calendar.DAY_OF_MONTH);
+        data[4] = (byte) cal.get(Calendar.HOUR_OF_DAY);
+        data[5] = (byte) cal.get(Calendar.MINUTE);
+        data[6] = (byte) cal.get(Calendar.SECOND);
+        data[7] = (byte) ((cal.get(Calendar.DAY_OF_WEEK) + 5) % 7 + 1); // Rotate
+        data[8] = (byte) (cal.get(Calendar.MILLISECOND) * 256 / 1000); // Fractions256
+        data[9] = 0x01; // Adjust Reason: Manual time update
+
+        String date = year + "/" + data[2] + "/" + data[3] + " " +
+                String.format(Locale.US, "%1$02d:%2$02d:%3$02d", data[4], data[5], data[6]) +
+                " (WeekOfDay:" + data[7] + " Fractions256:" + data[8] + " AdjustReason:" + data[9] + ")";
+        StringBuilder sb = new StringBuilder("");
+        for (byte b : data) {
+            sb.append(String.format(Locale.US, "%02x,", b));
+        }
+        BleLog.d("CTS Tx Time:" + date);
+        BleLog.d("CTS Tx Data:" + sb.toString());
+        return data;
+    }
+
+    private boolean isBluetoothEnabled() {
+
+        return getBluetoothAdapter().isEnabled();
+    }
+/*
+    // the callback for scan device
+    private ZzMedBLEDeviceManager.ZzMedBLEDeviceScanCB bleDeviceScanCB =
+            new ZzMedBLEDeviceManager.ZzMedBLEDeviceScanCB() {
+
+                @Override public void onFailure(ZzMedBLEErrMsg errMsg) {
+                    final ZzMedBLEErrMsg fErrMsg = errMsg;
+                    runOnUiThread(new Runnable() {
+
+                        @Override public void run() {
+                            if (fErrMsg != ZzMedBLEErrMsg.ZZMED_BLE_ERROR_DEVICE_SCAN_TIME_OUT) {
+                                ToastUtils.showShort(fErrMsg.getErrMsg());
+                            }
+                        }
+                    });
+                    startScan();
+                }
+
+                @Override public void onScanProgress(int progress) {
+
+                }
+
+                @Override public void onScanComplete(ZzMedBLEDevice device) {
+                    if (!isDeviceExist(device) && isBluetoothOpen()) {
+                        mDevices.add(device);
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        runOnUiThread(new Runnable() {
+
+                            @Override public void run() {
+                                hem9200ScandeviceAdapter.notifyData(mDevices);
+                            }
+                        });
+                    }
+                }
+            };
+
+    private boolean isDeviceExist(ZzMedBLEDevice targetDevice) {
+        for (ZzMedBLEDevice device : mDevices) {
+            if (device.getBlueDevice().getName().equals(targetDevice.getBlueDevice().getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    */
 }
