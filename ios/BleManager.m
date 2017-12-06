@@ -5,9 +5,21 @@
 #import "NSData+Conversion.h"
 #import "CBPeripheral+Extensions.h"
 #import "BLECommandContext.h"
+#import "Model.h"
 
 static CBCentralManager *_sharedManager = nil;
 static BleManager * _instance = nil;
+
+
+
+@interface BleManager ()
+@property NSMutableDictionary<NSUUID *, NSDictionary<NSString *, id> *> *deviceInfoDictionary;
+@property NSArray<NSDictionary<NSString *, id> *> *deviceInfoSnapshot;
+@property dispatch_source_t reloadTimer;
+@property (nonatomic, assign) BLEDeviceCategory category;
+@end
+
+//======
 
 @implementation BleManager
 
@@ -23,7 +35,7 @@ bool hasListeners;
 
 - (instancetype)init
 {
-    
+
     if (self = [super init]) {
         peripherals = [NSMutableSet set];
         connectCallbacks = [NSMutableDictionary new];
@@ -39,6 +51,9 @@ bool hasListeners;
         NSLog(@"BleManager created");
     }
     
+    self.category = BLEDeviceCategoryBloodPressure;
+    self.deviceInfoDictionary = [@{} mutableCopy];
+
     return self;
 }
 
@@ -52,7 +67,7 @@ bool hasListeners;
 
 - (NSArray<NSString *> *)supportedEvents
 {
-    return @[@"BleManagerDidUpdateValueForCharacteristic", @"BleManagerStopScan", @"BleManagerDiscoverPeripheral", @"BleManagerConnectPeripheral", @"BleManagerDisconnectPeripheral", @"BleManagerDidUpdateState"];
+    return @[@"BleManagerDidUpdateValueForCharacteristic", @"BleManagerStopScan", @"BleManagerDiscoverPeripheral", @"BleManagerConnectPeripheral", @"BleManagerDisconnectPeripheral", @"BleManagerDidUpdateState",  @"BleManagerBPMDataRcv"];
 }
 
 
@@ -250,12 +265,12 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options callback:(nonnull RCTResponseSen
         [initOptions setObject:[NSNumber numberWithBool:[[options valueForKey:@"showAlert"] boolValue]]
                         forKey:CBCentralManagerOptionShowPowerAlertKey];
     }
-    
+
     if ([[options allKeys] containsObject:@"restoreIdentifierKey"]) {
-        
+
         [initOptions setObject:[options valueForKey:@"restoreIdentifierKey"]
                         forKey:CBCentralManagerOptionRestoreIdentifierKey];
-        
+
         if (_sharedManager) {
             manager = _sharedManager;
             manager.delegate = self;
@@ -267,12 +282,15 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options callback:(nonnull RCTResponseSen
         manager = [[CBCentralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue() options:initOptions];
         _sharedManager = manager;
     }
-    
+
     callback(@[]);
 }
 
 RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates options:(nonnull NSDictionary*)scanningOptions callback:(nonnull RCTResponseSenderBlock)callback)
 {
+    
+    [self _scanForDevices];
+    
     NSLog(@"scan with timeout %@", timeoutSeconds);
     NSArray * services = [RCTConvert NSArray:serviceUUIDStrings];
     NSMutableArray *serviceUUIDs = [NSMutableArray new];
@@ -328,6 +346,60 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
 
 RCT_EXPORT_METHOD(connect:(NSString *)peripheralUUID callback:(nonnull RCTResponseSenderBlock)callback)
 {
+//
+//    self.reloadTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+//    dispatch_source_set_timer(self.reloadTimer, DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC, 0 * NSEC_PER_SEC);
+//    dispatch_source_set_event_handler(self.reloadTimer, ^{
+//        self.deviceInfoSnapshot = self.deviceInfoDictionary.allValues;
+//        
+//    });
+    
+    self.deviceInfoSnapshot = self.deviceInfoDictionary.allValues;
+    NSDictionary *deviceInfo = [[NSDictionary alloc] init]; //≥ı ºªØ
+    for(int i=0;i<self.deviceInfoSnapshot.count; i++){
+        NSString *str = [NSString stringWithFormat:@"%@",[self.deviceInfoSnapshot[i] objectForKey:@"identifier"]];
+        
+        if ([str isEqualToString:peripheralUUID]) {
+           deviceInfo = self.deviceInfoSnapshot[i];
+        }
+    }
+    if(!deviceInfo){
+        NSString *error = [NSString stringWithFormat:@"Could not find deviceInfo %@.", peripheralUUID];
+        NSLog(@"%@", error);
+        callback(@[error]);
+    }
+    // Start to read the data.
+     NSLog(@"Start to read the data.");
+    [[BLEDeviceManager sharedManager] readDataFromDeviceWithIdentifier:deviceInfo[BLEDeviceInfoIdentifierKey] dataObserver:^(BLEDeviceCharacteristicType aCharacteristicType, NSDictionary<NSString *, id> * _Nonnull data) {
+        NSLog(@"%@", [BLEDeviceManager characteristicTypeName:aCharacteristicType]);
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (aCharacteristicType == BLEDeviceCharacteristicTypeBloodPressureData) {
+                // Output to History
+                NSLog(@"Add history");
+                // [HistoryData addObject:data];
+            }
+            
+//            NSLog(@"%@",aCharacteristicType);
+            
+            [self _updateViewsByCharacteristicType:aCharacteristicType withData:data];
+        });
+    } connectionObserver:^(BLEDeviceConnectionState aState) {
+        NSLog(@"aState ==  %@", [BLEDeviceManager connectionStateName:aState]);
+        if (hasListeners) {
+//
+            NSString *str = [NSString stringWithFormat:@"%@",[BLEDeviceManager connectionStateName:aState]];
+            [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":str}];
+        }
+
+    } completion:^(BLEDeviceCompletionReason aReason) {
+        NSLog(@"%@", [BLEDeviceManager completionReasonName:aReason]);
+        //        self.currentDeviceIdentifier = nil;
+        //        dispatch_async(dispatch_get_main_queue(), ^{
+        //            [self.connectButton setTitle:@"CONNECT" forState:UIControlStateNormal];
+        //        });
+    }];
+    /*
     NSLog(@"Connect");
     CBPeripheral *peripheral = [self findPeripheralByUUID:peripheralUUID];
     if (peripheral == nil){
@@ -358,8 +430,16 @@ RCT_EXPORT_METHOD(connect:(NSString *)peripheralUUID callback:(nonnull RCTRespon
         NSLog(@"%@", error);
         callback(@[error, [NSNull null]]);
     }
-}
+     */
+    //=========================
+   // NSLog(@"%@ is selected", deviceInfo[BLEDeviceInfoLocalNameKey]); peripheralUUID
+//     [self _updateViewsByDeviceInfo:self.deviceInfoDictionary["identifier":peripheralUUID];
 
+
+    
+    
+}
+#pragma CONNECT
 RCT_EXPORT_METHOD(disconnect:(NSString *)peripheralUUID  callback:(nonnull RCTResponseSenderBlock)callback)
 {
     CBPeripheral *peripheral = [self findPeripheralByUUID:peripheralUUID];
@@ -885,4 +965,168 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
   return _instance;
 }
 
+//=========================777
+#pragma mark - Private methods
+
+- (void)_scanForDevices {
+    NSLog(@"");
+    
+    [self.deviceInfoDictionary removeAllObjects];
+    [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.deviceInfoDictionary[deviceInfo[BLEDeviceInfoIdentifierKey]] = deviceInfo;
+        });
+    } completion:^(BLEDeviceCompletionReason aReason) {
+//        [self.navigationController popViewControllerAnimated:YES];
+    }];
+    
+
+}
+
+//===================================miao   start==============
+- (void)_updateViewsByDeviceInfo:(NSDictionary<NSString *, id> *)deviceInfo {
+    NSString *localName = deviceInfo[BLEDeviceInfoLocalNameKey];
+    //    self.localNameLabel.text = localName;
+    //    [self.localNameLabel sizeToFit];
+}
+
+- (CBPeripheral*)findDeviceInfoByUUID:(NSString*)uuid {
+    
+    CBPeripheral *peripheral = nil;
+    //    deviceInfoDictionary
+    for (CBPeripheral *p in peripherals) {
+        
+        NSString* other = p.identifier.UUIDString;
+        
+        if ([uuid isEqualToString:other]) {
+            peripheral = p;
+            break;
+        }
+    }
+    return peripheral;
+}
+
+
+- (void)_updateViewsByCharacteristicType:(BLEDeviceCharacteristicType)characteristicType withData:(NSDictionary<NSString *, id> *)data {
+//    void (^setTextToLabel)(NSString *, UILabel *) = ^(NSString *text, UILabel *label) {
+//        label.text = (text ? text : BlankText);
+//        [label sizeToFit];
+//    };
+    if(hasListeners) {
+//         [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":""}];
+    }
+    switch (characteristicType) {
+//        case BLEDeviceConnectionStateConnected:
+//        {
+//            if(hasListeners) {
+//                [self sendEventWithName:@"BleManagerBPMDataRcv" body:@{}];
+//            }
+//            break;
+//        }
+        
+        case BLEDeviceCharacteristicTypeCurrentTime:
+        {
+            NSDate *currentTime = data[BLEDeviceCurrentTimeKey];
+            NSString *currentTimeStr = [NSString stringWithFormat:@"%@", currentTime];
+//            setTextToLabel(currentTimeStr, self.timeLabel);
+            NSLog(@"CTS Data:%@", currentTimeStr);
+            break;
+        }
+        case BLEDeviceCharacteristicTypeBatteryLevel:
+        {
+            NSNumber *batteryLevel = data[BLEDeviceBatteryLevelKey];
+            NSString *batteryLevelStr = [NSString stringWithFormat:@"%ld %%", (long)batteryLevel.integerValue];
+//            setTextToLabel(batteryLevelStr, self.batteryLabel);
+            NSLog(@"Battery Level Data:%@", batteryLevelStr);
+            break;
+        }
+        case BLEDeviceCharacteristicTypeBloodPressureData:
+        {
+            NSString *pressureUnit = data[BLEDeviceBloodPressureDataUnitKey];
+            
+            // Parse Blood Pressure Measurement
+            NSNumber *systolic = data[BLEDeviceBloodPressureDataSystolicKey];
+            NSString *systolicStr = [NSString stringWithFormat:@"%.1f %@", systolic.floatValue, pressureUnit];
+            
+            NSNumber *diastolic = data[BLEDeviceBloodPressureDataDiastolicKey];
+            NSString *diastolicStr = [NSString stringWithFormat:@"%.1f %@", diastolic.floatValue, pressureUnit];
+            
+            NSNumber *meanArterialPressure = data[BLEDeviceBloodPressureDataMeanArterialPressureKey];
+            NSString *meanArterialPressureStr = [NSString stringWithFormat:@"%.1f %@", meanArterialPressure.floatValue, pressureUnit];
+            
+            NSLog(@"systolicValue:%@", systolicStr);
+            NSLog(@"diastolicValue:%@", diastolicStr);
+            NSLog(@"meanArterialPressureValue:%@", meanArterialPressureStr);
+            
+//            setTextToLabel(systolicStr, self.systolicLabel);
+//            setTextToLabel(diastolicStr, self.diastolicLabel);
+//            setTextToLabel(meanArterialPressureStr, self.meanAlterialLabel);
+            
+            // Parse Timestamp
+            NSDate *timeStamp = data[BLEDeviceBloodPressureDataTimeStampKey];
+            NSString *timeStampStr = @"";
+            if (timeStamp) {
+                timeStampStr = [NSString stringWithFormat:@"%@", timeStamp];
+//                setTextToLabel(timeStampStr, self.timestampLabel);
+                NSLog(@"Timestamp Data:%@", timeStampStr);
+            }
+            else {
+//                setTextToLabel(nil, self.timestampLabel);
+            }
+            
+            // Parse PulseRate
+            NSNumber *pulseRate = data[BLEDeviceBloodPressureDataPulseRateKey];
+            if (pulseRate) {
+                NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f bpm", pulseRate.floatValue];
+//                setTextToLabel(pulseRateStr, self.pulseRateLabel);
+                NSLog(@"PulseRate Data:%@", pulseRateStr);
+            }
+            else {
+//                setTextToLabel(nil, self.pulseRateLabel);
+            }
+            
+            // Parse MeasurementStatus
+            NSNumber *measurementStatus = data[BLEDeviceBloodPressureDataMeasurementStatusKey];
+            if (measurementStatus) {
+                NSString *measurementStatusStr = [NSString stringWithFormat:@"%04x", measurementStatus.shortValue];
+                NSLog(@"MeasurementStatus Data:%@", measurementStatusStr);
+                
+//                setTextToLabel((measurementStatus.integerValue & 0x01 ? @"YES" : @"NO"), self.bodyMovementLabel);
+//                setTextToLabel((measurementStatus.integerValue & 0x03 ? @"YES" : @"NO"), self.irregularPulseLabel);
+            }
+            else {
+//                setTextToLabel(nil, self.bodyMovementLabel);
+//                setTextToLabel(nil, self.irregularPulseLabel);
+            }
+            
+            // Output log for data aggregation
+            NSString *entry = [[NSString alloc] init];
+            entry =[entry stringByAppendingFormat:@"%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
+            
+            NSString *agg = [NSString stringWithFormat:@"## For aggregation ## "];
+            agg = [agg stringByAppendingFormat:@"%@,", timeStampStr];
+            agg = [agg stringByAppendingFormat:@"%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
+            NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+            formatter.dateFormat = @"yyyy-MM-dd HH:mm:ss";
+            agg = [agg stringByAppendingString:[formatter stringFromDate:[NSDate date]]];
+        
+            NSLog(@"%@", agg);
+            if (hasListeners) {
+                [self sendEventWithName:@"BleManagerBPMDataRcv" body:@{@"entry":entry}];
+            }
+            
+            break;
+        }
+        case BLEDeviceCharacteristicTypeBloodPressureFeature:
+        {
+            NSData *bloodPressureFeatureValue = data[BLEDeviceBloodPressureFeatureKey];
+            NSLog(@"Blood Pressure Feature:%@", bloodPressureFeatureValue);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+//===================================miao  end==============
 @end
