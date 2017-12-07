@@ -167,16 +167,21 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
 		//============================start=======================================
-       /* mIsBluetoothOn = isBluetoothEnabled();
+		this.scanOmron(serviceUUIDs, callback);
+
+       /*
+        mIsBluetoothOn = isBluetoothEnabled();
+
         mHandler = new Handler();
         //  mListenerRef = new WeakReference<>((OnEventListener) activity);
 
         mRefreshInterval = 500;
 
         mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[serviceUUIDs.size()]);
-        mBleScanner.startScan(mUUIDs, 0 *//* no timeout *//*, mScanListener);
+        mBleScanner.startScan(mUUIDs, 0 , mScanListener); //  0  no timeout
 
-        mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);*/
+        mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
+		*/
 		//============================end=======================================
  
 	}
@@ -234,7 +239,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			callback.invoke("Invalid peripheral uuid");
 			return;
 		}
-        //原来的链接方式
+        //???????????
 //    	peripheral.connect(callback, getCurrentActivity());
 //        scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
         int tempInt = scanList.size();
@@ -652,9 +657,17 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		}
 	};
 
-@ReactMethod
-public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Callback callback) {
-    mIsBluetoothOn = isBluetoothEnabled();
+	/**
+	 * Omron 扫描血压计
+	 * @param serviceUUIDs
+	 * @param callback
+     */
+//@ReactMethod
+//public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Callback callback) {
+private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
+
+	mIsBluetoothOn = isBluetoothEnabled();
+
     mHandler = new Handler();
 
     mRefreshInterval = 500;
@@ -666,7 +679,7 @@ public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Cal
 
 //    startScan
 
-    int tempInt = scanList.size();
+   /* int tempInt = scanList.size();
     for(int i=0;i<tempInt;i++){
         DiscoverPeripheral dp = scanList.get(i);
 
@@ -674,7 +687,7 @@ public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Cal
             Log.d(LOG_TAG, "peripheralUUID miao :"+peripheralUUID);
             onConnect( callback, dp);
         }
-    }
+    }*/
 }
 
     @ReactMethod
