@@ -17,11 +17,16 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
+
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
+import org.litepal.LitePalApplication;
 
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -38,6 +43,17 @@ import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.ErrorCode;
 import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.GattStatusCode;
 import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.GattUUID;
 import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.StateInfo;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.omron.ble.DeviceInfo;
+import com.omron.ble.common.OMRONBLEErrMsg;
+import com.omron.ble.device.OMRONBLEBGMDevice;
+import com.omron.ble.device.OMRONBLEDevice;
+import com.omron.ble.device.OMRONBLEDeviceState;
+import com.omron.ble.manager.OMRONBLEDeviceManager;
+
+import com.omron.ble.model.BGData;
 
 import static android.app.Activity.RESULT_OK;
 import static android.os.Build.VERSION_CODES.LOLLIPOP;
@@ -100,6 +116,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 				.emit(eventName, params);
 	}
 
+
+
+
 	@ReactMethod
 	public void start(ReadableMap options, Callback callback) {
 		Log.d(LOG_TAG, "start");
@@ -121,6 +140,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
         //add=======================
         mBleScanner = new BleScanner(reactContext, this);
+		LitePalApplication.initialize(reactContext);
         //add=======================end
 		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
 		filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
@@ -239,9 +259,11 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			callback.invoke("Invalid peripheral uuid");
 			return;
 		}
-        //???????????
+		/*
 //    	peripheral.connect(callback, getCurrentActivity());
-//        scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
+//       scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
+		*/
+		/*
         int tempInt = scanList.size();
         for(int i=0;i<tempInt;i++){
             DiscoverPeripheral dp = scanList.get(i);
@@ -251,7 +273,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
                 onConnect( callback, dp);
             }
         }
-
+		*/
+		// 126T connect
+		this.startBondActivity();
 		//=====================add start=========================
 //		BleLog.e(" onConnect =============start=========miao");
 //		DiscoverPeripheral discoverPeripheral = data.getParcelableExtra(EXTRA_CONNECT_REQUEST_PERIPHERAL);
@@ -658,7 +682,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 	};
 
 	/**
-	 * Omron É¨ÃèÑªÑ¹¼Æ
+	 * Omron
 	 * @param serviceUUIDs
 	 * @param callback
      */
@@ -1433,4 +1457,149 @@ private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
         return false;
     }
     */
+//========== xueya====================
+
+	private OMRONBLEDevice mHem126tDevice;
+	private com.omron.ble.model.BGData mLastBgData;
+
+	private void startBondActivity() {
+		OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
+				.getBLEDevManager(this.reactContext);
+		manager.setSyncTime(true);
+		this.onPinCodeInput("586414");
+ 		manager.scan(mScanDeviceListener);
+	}
+	private void onPinCodeInput(String pincode) {
+		if (DeviceInfo.isDeviceInfoEmpty()) {
+			DeviceInfo.savePincode(pincode);
+		} else {
+			DeviceInfo.updateDeviceInfo(pincode);
+		}
+//		mPincodeListener.onPinCodeInput(mPincode);
+		startFragmentTransaction();
+	}
+	private void connectToDeviceFailed() {
+
+	}
+
+	private void startFragmentTransaction() {
+
+	}
+
+	private OMRONBLEDeviceManager.OMRONBLEDeviceScanCB mScanDeviceListener = new OMRONBLEDeviceManager.OMRONBLEDeviceScanCB() {
+
+		@Override
+		public void onFailure(OMRONBLEErrMsg errMsg) {
+			connectToDeviceFailed();
+		}
+
+		@Override
+		public void onScanProgress(int progress) {
+
+		}
+
+		@Override
+		public void onScanComplete(OMRONBLEDevice device) {
+			mHem126tDevice = device;
+
+			List<DeviceInfo> list = DeviceInfo.getDeviceInfo();
+			device.connect(connectionCB, list.get(0).getBgPincode());
+		}
+	};
+	//the callback for connect to device
+	private OMRONBLEDevice.OMRONBLEDeviceConnectionCB connectionCB = new OMRONBLEDevice.OMRONBLEDeviceConnectionCB() {
+		public void onFailure(OMRONBLEErrMsg errMsg) {
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					mHem126tDevice.disconnect(disconnectionCB);
+					connectToDeviceFailed();
+				}
+			});
+		}
+
+		@Override
+		public void onConnectionStateChange(OMRONBLEDeviceState status) {
+			final OMRONBLEDeviceState fStatus = status;
+
+			WritableMap map = Arguments.createMap();
+			map.putString("state",  fStatus.toString());
+			Log.d(LOG_TAG, "state:" + fStatus);
+
+//			sendEvent("BleManagerDiscoverPeripheral", map);
+			sendEvent("BleManagerDidUpdateState", map);
+			switch (fStatus) {
+				case STATE_CONNECTING:
+					break;
+
+				case STATE_CONNECTED:
+					((OMRONBLEBGMDevice) mHem126tDevice).readData(-1, readBGDataCB);
+					break;
+
+				case STATE_DISCONNECTING:
+					break;
+
+				case STATE_DISCONNECTED:
+					mHem126tDevice.disconnect(disconnectionCB);
+					break;
+
+				default:
+					break;
+			}
+
+
+
+		}
+	};
+
+	//the callback for disconnect to device
+	private OMRONBLEDevice.OMRONBLEDeviceConnectionCB disconnectionCB = new OMRONBLEDevice.OMRONBLEDeviceConnectionCB() {
+		public void onFailure(OMRONBLEErrMsg errMsg) {
+			connectToDeviceFailed();
+		}
+
+		@Override
+		public void onConnectionStateChange(OMRONBLEDeviceState status) {
+
+		}
+	};
+
+	private OMRONBLEBGMDevice.OMRONBLEReadBGDataCB readBGDataCB = new OMRONBLEBGMDevice.OMRONBLEReadBGDataCB() {
+
+		@Override
+		public void onFailure(OMRONBLEErrMsg errMsg) {
+			connectToDeviceFailed();
+		}
+
+		@Override
+		public void onDataReadComplete(List<BGData> data) {
+
+			mLastBgData = getLastBgData(data);
+			WritableMap map = Arguments.createMap();
+			map.putString("state",  mLastBgData.toString());
+			Log.d(LOG_TAG, "state:" + mLastBgData);
+
+			sendEvent("BleManagerBPMDataRcv", map);
+
+			startFragmentTransaction();
+		}
+
+		@Override
+		public void onProgress(int count, int total) {
+
+		}
+	};
+
+	private com.omron.ble.model.BGData getLastBgData(List<com.omron.ble.model.BGData> data) {
+		Comparator<com.omron.ble.model.BGData> flashBackComparator = new Comparator<com.omron.ble.model.BGData>() {
+
+			@Override
+			public int compare(com.omron.ble.model.BGData lhs, com.omron.ble.model.BGData rhs) {
+				return rhs.getTime().compareTo(lhs.getTime());
+			}
+		};
+		Collections.sort(data, flashBackComparator);
+		return data.get(0);
+	}
+
 }
