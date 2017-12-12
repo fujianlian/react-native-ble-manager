@@ -35,8 +35,9 @@ public class DeviceInfo extends DataSupport {
 
     public static final String HEM_7081_IT = "hem_7081_it";
     public static final String HGM_126T = "hgm_126T";
+    public static final String HGM_124T = "hgm_124T";
 
-    @StringDef({HEM_7081_IT, HGM_126T})
+    @StringDef({HEM_7081_IT, HGM_126T, HGM_124T})
     @Retention(RetentionPolicy.SOURCE)
     public @interface BondDeviceType {
     }

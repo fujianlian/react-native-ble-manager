@@ -263,7 +263,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 //    	peripheral.connect(callback, getCurrentActivity());
 //       scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
 		*/
-		/*
+		/* hm 9200*/
         int tempInt = scanList.size();
         for(int i=0;i<tempInt;i++){
             DiscoverPeripheral dp = scanList.get(i);
@@ -273,19 +273,12 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
                 onConnect( callback, dp);
             }
         }
-		*/
+
 		// 126T connect
-		this.startBondActivity();
+		//this.startBondActivity();
 		//=====================add start=========================
-//		BleLog.e(" onConnect =============start=========miao");
-//		DiscoverPeripheral discoverPeripheral = data.getParcelableExtra(EXTRA_CONNECT_REQUEST_PERIPHERAL);
-//		if (null == discoverPeripheral) {
-//			enableBluetoothCallback.invoke("discoverPeripheral is null");
-//			return;
-//		}
-//		BleLog.e(" onConnect =============start=========miao");
-// 		onConnect(discoverPeripheral);
-//=====================add end=========================
+
+		//=====================add end=========================
 	}
 
 	@ReactMethod
@@ -1457,17 +1450,20 @@ private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
         return false;
     }
     */
-//========== xueya====================
+//========== xuetang start====================
+//	GlucoseManager glucoseManager = new GlucoseManager(this.reactContext);
 
 	private OMRONBLEDevice mHem126tDevice;
 	private com.omron.ble.model.BGData mLastBgData;
 
 	private void startBondActivity() {
+//        OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
+//                .getBLEDevManager(this.reactContext);
 		OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
-				.getBLEDevManager(this.reactContext);
+				.getBLEDevManager(this.context);
 		manager.setSyncTime(true);
-		this.onPinCodeInput("586414");
- 		manager.scan(mScanDeviceListener);
+ 		this.onPinCodeInput("892104");
+		manager.scan(mScanDeviceListener);
 	}
 	private void onPinCodeInput(String pincode) {
 		if (DeviceInfo.isDeviceInfoEmpty()) {
@@ -1591,7 +1587,7 @@ private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
 	};
 
 	private com.omron.ble.model.BGData getLastBgData(List<com.omron.ble.model.BGData> data) {
-		Comparator<com.omron.ble.model.BGData> flashBackComparator = new Comparator<com.omron.ble.model.BGData>() {
+		Comparator<BGData> flashBackComparator = new Comparator<com.omron.ble.model.BGData>() {
 
 			@Override
 			public int compare(com.omron.ble.model.BGData lhs, com.omron.ble.model.BGData rhs) {
@@ -1601,5 +1597,5 @@ private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
 		Collections.sort(data, flashBackComparator);
 		return data.get(0);
 	}
-
+//====================== xuetang  end=========================
 }
