@@ -465,7 +465,10 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
         return;
     }
     
+   
+    
     NSMutableArray<CBUUID *> *services = [@[] mutableCopy];
+    /* 原过滤方法
     if (categories & BLEDeviceCategoryBloodPressure) {
         [services addObject:self.bloodPressureServiceUUID];
     }
@@ -475,7 +478,7 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
     if (!services.count) {
         services = nil;
     }
-    
+    */
     __weak typeof(self) weakSelf = self;
     ble_device_dispatch_to_internal_queue(^{
         
@@ -758,7 +761,7 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary<NSString *, id> *)advertisementData RSSI:(NSNumber *)RSSI {
-    NSLog(@"%@", peripheral.identifier.UUIDString);
+    NSLog(@"=======miao======%@", peripheral.identifier.UUIDString);
 
     NSUUID *identifier = peripheral.identifier;
     NSDictionary<NSString *, id> *deviceInfo = nil;
