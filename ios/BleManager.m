@@ -20,8 +20,7 @@ static NSMutableArray<NSDictionary<NSString *, id> *> *HistoryData;
 @end
 
 //====================miao========
- 
-//======
+
 
 @implementation BleManager
 
@@ -306,7 +305,19 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSN
         CBUUID *serviceUUID =[CBUUID UUIDWithString:[serviceUUIDStrings objectAtIndex: i]];
         [serviceUUIDs addObject:serviceUUID];
     }
-    [manager scanForPeripheralsWithServices:serviceUUIDs options:options];
+    /*
+    NSMutableArray<CBUUID *> *servicesa = [@[] mutableCopy];
+    //添加过滤
+    //[servicesa addObject:self.bloodPressureServiceUUID];
+    
+    if (!servicesa.count) {
+        servicesa = nil;
+    }
+    */
+    /* [manager scanForPeripheralsWithServices:services options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
+     */
+    //serviceUUIDs
+    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
 
     dispatch_async(dispatch_get_main_queue(), ^{
         self.scanTimer = [NSTimer scheduledTimerWithTimeInterval:[timeoutSeconds floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
