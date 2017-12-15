@@ -453,6 +453,8 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
     }
 }
 
+
+
 - (void)scanForDevicesWithCategories:(BLEDeviceCategory)categories observer:(BLEDeviceScanObserverBlock)observer completion:(BLEDeviceCompletionBlock)completion {
     NSLog(@"");
     
@@ -468,7 +470,7 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
    
     
     NSMutableArray<CBUUID *> *services = [@[] mutableCopy];
-    /* 原过滤方法
+    /* 原过滤方法*/
     if (categories & BLEDeviceCategoryBloodPressure) {
         [services addObject:self.bloodPressureServiceUUID];
     }
@@ -478,7 +480,7 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
     if (!services.count) {
         services = nil;
     }
-    */
+    
     __weak typeof(self) weakSelf = self;
     ble_device_dispatch_to_internal_queue(^{
         
@@ -504,9 +506,9 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
         
         // Clear the scan cache.
         [weakSelf.scanCacheDictionary removeAllObjects];
-        
+//        @"1810" @[[CBUUID UUIDWithString:@"1810"]]  services
         weakSelf.scanStartBlock = ^{
-            [weakSelf.central scanForPeripheralsWithServices:services options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
+            [weakSelf.central scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
         };
         weakSelf.scanObserverBlock = ^(NSDictionary<NSString *, id> *deviceInfo) {
             if (observer) {
@@ -785,6 +787,8 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
         self.scanObserverBlock(deviceInfo);
     }
 }
+
+
 
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
     NSLog(@"%@", peripheral.identifier.UUIDString);

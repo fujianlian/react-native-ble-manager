@@ -318,10 +318,12 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSN
      */
     //serviceUUIDs
     [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
-
+    /*
+     //时间限制
     dispatch_async(dispatch_get_main_queue(), ^{
         self.scanTimer = [NSTimer scheduledTimerWithTimeInterval:[timeoutSeconds floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
     });
+    */
     //old ===  end
     callback(@[]);
 }
@@ -356,6 +358,15 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
     NSLog(@"Discover peripheral: %@", [peripheral name]);
     if (hasListeners) {
         [self sendEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
+        /*
+        int a = 500;
+        NSNumber *intObj = [NSNumber numberWithInt:a];
+    
+        NSLog(@"scan with timeout %@", intObj);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.scanTimer = [NSTimer scheduledTimerWithTimeInterval:[intObj floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
+        });
+	*/
     }
 }
 

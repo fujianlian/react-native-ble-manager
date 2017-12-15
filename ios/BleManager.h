@@ -29,4 +29,6 @@
 // For integration with external libraries, advanced use only.
 +(BleManager *)getInstance;
 
+//- (void) ·½·¨
+
 @end
