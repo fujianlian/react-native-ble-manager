@@ -283,6 +283,8 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options callback:(nonnull RCTResponseSen
         manager = [[CBCentralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue() options:initOptions];
         _sharedManager = manager;
     }
+    //检测蓝牙状态
+    [self _updateViewsByManagerState:[BLEDeviceManager sharedManager].state];
 
     callback(@[]);
 }
@@ -948,6 +950,15 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 //===================================miao  start ==============
 
 #pragma mark - Private methods
+
+- (void)_updateViewsByManagerState:(BLEDeviceManagerState)state {
+    if (state != BLEDeviceManagerStatePoweredOn) {
+        NSLog(@"1111111111111111111");
+    }
+    else {
+        NSLog(@"22222222222222222222");
+    }
+}
 
 - (void)_scanForDevices {
     NSLog(@"");
