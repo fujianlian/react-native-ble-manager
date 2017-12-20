@@ -185,7 +185,12 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			}
 		}
 
-		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
+		/**/WritableArray myServiceUUIDs = new  WritableNativeArray();
+		myServiceUUIDs.pushString("1810");//1810  180F
+		myServiceUUIDs.size();
+//		serviceUUIDs = myServiceUUIDs;
+		scanManager.scan(myServiceUUIDs, scanSeconds, options, callback);
+//		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
 		//============================start=======================================
 		this.scanOmron(serviceUUIDs, callback);
 
@@ -264,6 +269,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 //       scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
 		*/
 		/* hm 9200*/
+       /*
         int tempInt = scanList.size();
         for(int i=0;i<tempInt;i++){
             DiscoverPeripheral dp = scanList.get(i);
@@ -273,12 +279,19 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
                 onConnect( callback, dp);
             }
         }
-
+		*/
 		// 126T connect
-		//this.startBondActivity();
+		this.startBondActivity();
 		//=====================add start=========================
-
-		//=====================add end=========================
+//		BleLog.e(" onConnect =============start=========miao");
+//		DiscoverPeripheral discoverPeripheral = data.getParcelableExtra(EXTRA_CONNECT_REQUEST_PERIPHERAL);
+//		if (null == discoverPeripheral) {
+//			enableBluetoothCallback.invoke("discoverPeripheral is null");
+//			return;
+//		}
+//		BleLog.e(" onConnect =============start=========miao");
+// 		onConnect(discoverPeripheral);
+//=====================add end=========================
 	}
 
 	@ReactMethod
@@ -682,7 +695,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 //@ReactMethod
 //public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Callback callback) {
 private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
-
+ /*
 	mIsBluetoothOn = isBluetoothEnabled();
 
     mHandler = new Handler();
@@ -690,6 +703,27 @@ private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
     mRefreshInterval = 500;
 
     mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[0]);
+
+    mBleScanner.startScan(mUUIDs, 0 , mScanListener);
+    mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
+
+//    startScan
+
+    */
+
+    	UUID uid = UUIDHelper.uuidFromString("1810");//1810 180F
+		UUID[] uids = new UUID[1];
+//		UUID[] uids = new UUID[serviceUUIDs.size()];
+		uids[0] = uid;
+		/*uids*/
+
+		mIsBluetoothOn = isBluetoothEnabled();
+
+    mHandler = new Handler();
+
+    mRefreshInterval = 500;
+
+		mUUIDs = serviceUUIDs.toArrayList().toArray(uids);//;uids new UUID[serviceUUIDs.size()]
 
     mBleScanner.startScan(mUUIDs, 0 /* no timeout */, mScanListener);
     mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
