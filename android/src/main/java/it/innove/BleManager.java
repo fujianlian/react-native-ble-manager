@@ -188,15 +188,21 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		/**/WritableArray myServiceUUIDs = new  WritableNativeArray();
 		myServiceUUIDs.pushString("1810");//1810  180F
 		myServiceUUIDs.size();
-//		serviceUUIDs = myServiceUUIDs;
+		serviceUUIDs = myServiceUUIDs;
 		scanManager.scan(myServiceUUIDs, scanSeconds, options, callback);
 //		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
 		//============================start=======================================
-		this.scanOmron(serviceUUIDs, callback);
 
-       /*
+//		this.scanOmron(serviceUUIDs, callback);
+		this.scanOmronBloodPress(serviceUUIDs, callback);
+
+		/*
+
+
+
+
+
         mIsBluetoothOn = isBluetoothEnabled();
-
         mHandler = new Handler();
         //  mListenerRef = new WeakReference<>((OnEventListener) activity);
 
@@ -253,6 +259,28 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 	}
 
 
+	@ReactMethod
+	public void connectBloodPress(String peripheralUUID, Callback callback) {
+		Peripheral peripheral = retrieveOrCreatePeripheral(peripheralUUID);
+		if (peripheral == null) {
+			callback.invoke("Invalid peripheral uuid");
+			return;
+		}
+		//old link
+//    	peripheral.connect(callback, getCurrentActivity());
+//        scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
+		/* hm 9200*/
+        /**/
+		int tempInt = scanList.size();
+		for(int i=0;i<tempInt;i++){
+			DiscoverPeripheral dp = scanList.get(i);
+
+			if(dp.getAddress().equals(peripheralUUID)){
+				Log.d(LOG_TAG, "peripheralUUID miao :"+peripheralUUID);
+				onConnect( callback, dp);
+			}
+		}
+	}
 
 
 	@ReactMethod
@@ -264,12 +292,11 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			callback.invoke("Invalid peripheral uuid");
 			return;
 		}
-		/*
+        //old link
 //    	peripheral.connect(callback, getCurrentActivity());
-//       scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
-		*/
+//        scanList =  retrieveOrCreateDiscoverPeripheral( peripheralUUID);
 		/* hm 9200*/
-       /*
+       /**/
         int tempInt = scanList.size();
         for(int i=0;i<tempInt;i++){
             DiscoverPeripheral dp = scanList.get(i);
@@ -279,9 +306,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
                 onConnect( callback, dp);
             }
         }
-		*/
+
 		// 126T connect
-		this.startBondActivity();
+//		this.startBondActivity();
 		//=====================add start=========================
 //		BleLog.e(" onConnect =============start=========miao");
 //		DiscoverPeripheral discoverPeripheral = data.getParcelableExtra(EXTRA_CONNECT_REQUEST_PERIPHERAL);
@@ -692,54 +719,39 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 	 * @param serviceUUIDs
 	 * @param callback
      */
-//@ReactMethod
-//public void scanAndConnect(ReadableArray serviceUUIDs,String peripheralUUID, Callback callback) {
-private void scanOmron(ReadableArray serviceUUIDs, Callback callback) {
- /*
-	mIsBluetoothOn = isBluetoothEnabled();
+	private void scanOmronBloodSugar(ReadableArray serviceUUIDs, Callback callback) {
 
-    mHandler = new Handler();
-
-    mRefreshInterval = 500;
-
-    mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[0]);
-
-    mBleScanner.startScan(mUUIDs, 0 , mScanListener);
-    mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
-
-//    startScan
-
-    */
-
-    	UUID uid = UUIDHelper.uuidFromString("1810");//1810 180F
+	//    startScan
+    	UUID uid = UUIDHelper.uuidFromString("180F");//1810   180F
 		UUID[] uids = new UUID[1];
 //		UUID[] uids = new UUID[serviceUUIDs.size()];
 		uids[0] = uid;
 		/*uids*/
-
 		mIsBluetoothOn = isBluetoothEnabled();
+		mHandler = new Handler();
+		mRefreshInterval = 500;
 
-    mHandler = new Handler();
+//		mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[serviceUUIDs.size()]);//;uids new UUID[serviceUUIDs.size()]
 
-    mRefreshInterval = 500;
+		mBleScanner.startScan(uids, 0 , mScanListener);//mUUIDs
+		mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
 
-		mUUIDs = serviceUUIDs.toArrayList().toArray(uids);//;uids new UUID[serviceUUIDs.size()]
+	}
 
-    mBleScanner.startScan(mUUIDs, 0 /* no timeout */, mScanListener);
-    mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
+	private void scanOmronBloodPress(ReadableArray serviceUUIDs, Callback callback) {
+		//    startScan
+		UUID uid = UUIDHelper.uuidFromString("1810");//1810   180F
+		UUID[] uids = new UUID[1];
+		uids[0] = uid;
+		/*uids*/
+		mIsBluetoothOn = isBluetoothEnabled();
+		mHandler = new Handler();
+		mRefreshInterval = 500;
+//		mUUIDs = serviceUUIDs.toArrayList().toArray(new UUID[serviceUUIDs.size()]);//;uids new UUID[serviceUUIDs.size()]
+		mBleScanner.startScan(uids, 0 , mScanListener);//mUUIDs
+		mHandler.postDelayed(mScanResultRefreshRunnable, mRefreshInterval);
 
-//    startScan
-
-   /* int tempInt = scanList.size();
-    for(int i=0;i<tempInt;i++){
-        DiscoverPeripheral dp = scanList.get(i);
-
-        if(dp.getAddress().equals(peripheralUUID)){
-            Log.d(LOG_TAG, "peripheralUUID miao :"+peripheralUUID);
-            onConnect( callback, dp);
-        }
-    }*/
-}
+	}
 
     @ReactMethod
     public void onlyScan(ReadableArray serviceUUIDs, final int scanSeconds, boolean allowDuplicates, ReadableMap options, Callback callback) {
