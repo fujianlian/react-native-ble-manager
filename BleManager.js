@@ -88,6 +88,19 @@ class BleManager  {
       });
     });
   }
+  
+  connectBloodPress(peripheralId) {
+    return new Promise((fulfill, reject) => {
+      bleManager.connect(peripheralId, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          fulfill();
+        }
+      });
+    });
+  }
+
 
   createBond(peripheralId) {
     return new Promise((fulfill, reject) => {
