@@ -292,7 +292,8 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options callback:(nonnull RCTResponseSen
 RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates options:(nonnull NSDictionary*)scanningOptions callback:(nonnull RCTResponseSenderBlock)callback)
 {
     
-    [self _scanForDevices];
+//    [self _scanForDevices];
+    [self _scanBloodPressForDevices];
     
     //old ===  start
     NSLog(@"scan with timeout %@", timeoutSeconds);
@@ -360,7 +361,7 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
     NSLog(@"Discover peripheral: %@", [peripheral name]);
     if (hasListeners) {
         [self sendEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
-        /*
+        
         int a = 500;
         NSNumber *intObj = [NSNumber numberWithInt:a];
     
@@ -368,8 +369,83 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
         dispatch_async(dispatch_get_main_queue(), ^{
             self.scanTimer = [NSTimer scheduledTimerWithTimeInterval:[intObj floatValue] target:self selector:@selector(stopScanTimer:) userInfo: nil repeats:NO];
         });
-	*/
+
     }
+}
+//==============================================
+RCT_EXPORT_METHOD(scanBloodPress:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates options:(nonnull NSDictionary*)scanningOptions callback:(nonnull RCTResponseSenderBlock)callback)
+{
+    
+    [self _scanBloodPressForDevices];
+    
+    //old ===  start
+    NSLog(@"scan with timeout %@", timeoutSeconds);
+    NSArray * services = [RCTConvert NSArray:serviceUUIDStrings];
+    NSMutableArray *serviceUUIDs = [NSMutableArray new];
+    NSDictionary *options = nil;
+    if (allowDuplicates){
+        options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBCentralManagerScanOptionAllowDuplicatesKey];
+    }
+    
+    for (int i = 0; i < [services count]; i++) {
+        CBUUID *serviceUUID =[CBUUID UUIDWithString:[serviceUUIDStrings objectAtIndex: i]];
+        [serviceUUIDs addObject:serviceUUID];
+    }
+ 
+    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
+    
+    callback(@[]);
+}
+
+RCT_EXPORT_METHOD(connectBloodPress:(NSString *)peripheralUUID callback:(nonnull RCTResponseSenderBlock)callback)
+{
+    self.deviceInfoSnapshot = self.deviceInfoDictionary.allValues;
+    NSDictionary *deviceInfo = [[NSDictionary alloc] init]; //初始化
+    for(int i=0;i<self.deviceInfoSnapshot.count; i++){
+        NSString *str = [NSString stringWithFormat:@"%@",[self.deviceInfoSnapshot[i] objectForKey:@"identifier"]];
+        
+        if ([str isEqualToString:peripheralUUID]) {
+            deviceInfo = self.deviceInfoSnapshot[i];
+        }
+    }
+    
+    if(!deviceInfo.count){
+        NSString *error = [NSString stringWithFormat:@"Could not find deviceInfo %@.", peripheralUUID];
+        NSLog(@"%@", error);
+        callback(@[error]);
+        return;
+    }
+    // Start to read the data.
+    NSLog(@"Start to read the data.");
+    [[BLEDeviceManager sharedManager] readDataFromDeviceWithIdentifier:deviceInfo[BLEDeviceInfoIdentifierKey] dataObserver:^(BLEDeviceCharacteristicType aCharacteristicType, NSDictionary<NSString *, id> * _Nonnull data) {
+        NSLog(@"%@", [BLEDeviceManager characteristicTypeName:aCharacteristicType]);
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (aCharacteristicType == BLEDeviceCharacteristicTypeBloodPressureData) {
+                // Output to History
+                NSLog(@"Add history");
+                [HistoryData addObject:data];
+            }
+            
+            //            NSLog(@"%@",aCharacteristicType);
+            
+            [self _updateViewsByCharacteristicType:aCharacteristicType withData:data];
+        });
+    } connectionObserver:^(BLEDeviceConnectionState aState) {
+        NSLog(@"aState ==  %@", [BLEDeviceManager connectionStateName:aState]);
+        if (hasListeners) {
+            //
+            NSString *str = [NSString stringWithFormat:@"%@",[BLEDeviceManager connectionStateName:aState]];
+            [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":str}];
+        }
+        
+    } completion:^(BLEDeviceCompletionReason aReason) {
+        NSLog(@"%@", [BLEDeviceManager completionReasonName:aReason]);
+        //        self.currentDeviceIdentifier = nil;
+        //        dispatch_async(dispatch_get_main_queue(), ^{
+        //            [self.connectButton setTitle:@"CONNECT" forState:UIControlStateNormal];
+        //        });
+    }];
 }
 
 RCT_EXPORT_METHOD(connect:(NSString *)peripheralUUID callback:(nonnull RCTResponseSenderBlock)callback)
@@ -951,17 +1027,8 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 
 #pragma mark - Private methods
 
-- (void)_updateViewsByManagerState:(BLEDeviceManagerState)state {
-    if (state != BLEDeviceManagerStatePoweredOn) {
-        NSLog(@"1111111111111111111");
-    }
-    else {
-        NSLog(@"22222222222222222222");
-    }
-}
-
 - (void)_scanForDevices {
-    NSLog(@"");
+    NSLog(@"_scanForDevices");
     
     [self.deviceInfoDictionary removeAllObjects];
     [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
@@ -971,8 +1038,41 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
     } completion:^(BLEDeviceCompletionReason aReason) {
 //        [self.navigationController popViewControllerAnimated:YES];
     }];
-    
 
+}
+
+- (void)_scanBloodPressForDevices {
+    NSLog(@"_scanForDevices");
+    self.category = BLEDeviceCategoryBloodPressure;
+    
+    [self.deviceInfoDictionary removeAllObjects];
+    [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.deviceInfoDictionary[deviceInfo[BLEDeviceInfoIdentifierKey]] = deviceInfo;
+        });
+    } completion:^(BLEDeviceCompletionReason aReason) {
+        //        [self.navigationController popViewControllerAnimated:YES];
+    }];
+    
+}
+
+- (void)_scanBloodSugerForDevices {
+    NSLog(@"_scanBloodSugerForDevices");
+    //    self.category = '180F';
+    self.category =BLEDeviceCategoryBloodSugar;
+    [self.deviceInfoDictionary removeAllObjects];
+    
+//    [[OMRONBLEDeviceManager getBLEDevManager] scan:^(int progress) { }  success:^(OMRONBLEBGMDevice *device) { }
+//      failture:^(OMRONBLEErrMsg *error) { } ] ;
+    
+    [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.deviceInfoDictionary[deviceInfo[BLEDeviceInfoIdentifierKey]] = deviceInfo;
+        });
+    } completion:^(BLEDeviceCompletionReason aReason) {
+        // [self.navigationController popViewControllerAnimated:YES];
+    }];
+    
 }
 
 
@@ -1078,7 +1178,25 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
             
             // Output log for data aggregation
             NSString *entry = [[NSString alloc] init];
-            entry =[entry stringByAppendingFormat:@"%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
+            
+            //===========mmmm
+            if (pulseRate) {
+                NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f bpm", pulseRate.floatValue];
+                NSLog(@"PulseRate Data:%@", pulseRateStr);
+                entry =[entry stringByAppendingFormat:@"%@,%@,%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
+            }
+            else {
+                entry =[entry stringByAppendingFormat:@"%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
+            }
+            if (timeStamp) {
+                timeStampStr = [NSString stringWithFormat:@"%@", timeStamp];
+                //                setTextToLabel(timeStampStr, self.timestampLabel);
+                NSLog(@"Timestamp Data:%@", timeStampStr);
+            }
+            else {
+                //                setTextToLabel(nil, self.timestampLabel);
+            }
+
             
             NSString *agg = [NSString stringWithFormat:@"## For aggregation ## "];
             agg = [agg stringByAppendingFormat:@"%@,", timeStampStr];
