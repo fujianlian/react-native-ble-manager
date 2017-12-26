@@ -477,6 +477,9 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
     if (categories & BLEDeviceCategoryWeightScale) {
         [services addObject:self.weightScaleServiceUUID];
     }
+    if (categories & BLEDeviceCategoryBloodSugar) {
+        [services addObject:self.batteryServiceUUID];
+    }
     if (!services.count) {
         services = nil;
     }

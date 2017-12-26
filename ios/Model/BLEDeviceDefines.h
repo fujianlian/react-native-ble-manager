@@ -80,6 +80,7 @@ typedef NS_ENUM(NSInteger, BLEDeviceCharacteristicType) {
 typedef NS_OPTIONS(NSInteger, BLEDeviceCategory) {
     BLEDeviceCategoryBloodPressure = 1 << 0,
     BLEDeviceCategoryWeightScale = 1 << 1,
+    BLEDeviceCategoryBloodSugar = 1 << 2,
 };
 
 /** Device information key : AdvertisementData(Type of value : Dictionary) */

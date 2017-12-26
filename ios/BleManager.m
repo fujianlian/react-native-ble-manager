@@ -1026,6 +1026,14 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 //===================================miao  start ==============
 
 #pragma mark - Private methods
+- (void)_updateViewsByManagerState:(BLEDeviceManagerState)state {
+    if (state != BLEDeviceManagerStatePoweredOn) {
+        NSLog(@"本机的蓝牙未开");
+    }
+    else {
+        NSLog(@"本机蓝牙已开");
+    }
+}
 
 - (void)_scanForDevices {
     NSLog(@"_scanForDevices");
@@ -1183,18 +1191,15 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
             if (pulseRate) {
                 NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f bpm", pulseRate.floatValue];
                 NSLog(@"PulseRate Data:%@", pulseRateStr);
-                entry =[entry stringByAppendingFormat:@"%@,%@,%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
-            }
-            else {
-                entry =[entry stringByAppendingFormat:@"%@,%@,%@,", systolicStr, diastolicStr, meanArterialPressureStr];
-            }
-            if (timeStamp) {
-                timeStampStr = [NSString stringWithFormat:@"%@", timeStamp];
-                //                setTextToLabel(timeStampStr, self.timestampLabel);
-                NSLog(@"Timestamp Data:%@", timeStampStr);
-            }
-            else {
-                //                setTextToLabel(nil, self.timestampLabel);
+                
+                if (timeStamp) {
+                    timeStampStr = [NSString stringWithFormat:@"%@", timeStamp];
+                    NSLog(@"Timestamp Data:%@", timeStampStr);
+                    entry =[entry stringByAppendingFormat:@"{\"systolic\":\"%@\", \"diastolic\":\"%@\", \"meanArterial\":\"%@\", \"pulseRateStr\":\"%@\", \"timestampData\":\"%@\"}", systolicStr, diastolicStr, meanArterialPressureStr, pulseRateStr, timeStampStr];
+                }
+                
+            } else {
+                entry =[entry stringByAppendingFormat:@"{systolic:%@,diastolic:%@,%@}", systolicStr, diastolicStr, meanArterialPressureStr];
             }
 
             
@@ -1207,7 +1212,7 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
         
             NSLog(@"%@", agg);
             if (hasListeners) {
-                [self sendEventWithName:@"BleManagerBPMDataRcv" body:@{@"entry":entry}];
+                [self sendEventWithName:@"BleManagerBPMDataRcv" body:entry];
             }
             
             break;
