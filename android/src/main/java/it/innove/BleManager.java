@@ -17,7 +17,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Base64;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
 import com.facebook.react.bridge.*;
@@ -115,9 +114,6 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 				.getJSModule(RCTNativeAppEventEmitter.class)
 				.emit(eventName, params);
 	}
-
-
-
 
 	@ReactMethod
 	public void start(ReadableMap options, Callback callback) {
@@ -231,6 +227,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			return;
 		}
 		scanManager.stopScan(callback);
+		mBleScanner.stopScan();
 	}
 
 	@ReactMethod
@@ -1203,13 +1200,23 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
         // Output to History
         BleLog.e("Add history");
-        String entry = timestampStr
-                + "," + systolicVal
-                + "," + diastolicVal
-                + "," + meanApVal
-                + "," + pulseRateStr
-                + "," + String.format(Locale.US, "%1$02x", flags)
-                + "," + measurementStatusStr;
+        String entry = "{"
+				+"\"timestampData\":\""+timestampStr
+                + "\",\"systolic\":\"" + systolicVal
+                + "\",\"diastolic\":\"" + diastolicVal
+                + "\",\"meanApVal\":\"" + meanApVal
+                + "\",\"pulseRateStr\":\"" + pulseRateStr
+                + "\",\"flags\":\"" + String.format(Locale.US, "%1$02x", flags)
+                + "\",\"measurementStatus\":\"" + measurementStatusStr
+				+"\"}";
+		Map entrymap = new HashMap();
+		entrymap.put("timestampData",timestampStr);
+		entrymap.put("diastolic",diastolicVal);
+		entrymap.put("meanApVal",meanApVal);
+		entrymap.put("pulseRateStr",pulseRateStr);
+		entrymap.put("flags",String.format(Locale.US, "%1$02x", flags));
+		entrymap.put("measurementStatus",measurementStatusStr);
+
 //
 //                HistoryData hd = (HistoryData) this.getApplication();
 //                hd.add(HistoryData.SERV_BLS, entry);
@@ -1508,7 +1515,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
 				.getBLEDevManager(this.context);
 		manager.setSyncTime(true);
- 		this.onPinCodeInput("892104");
+//		this.onPinCodeInput("892104");
 		manager.scan(mScanDeviceListener);
 	}
 	private void onPinCodeInput(String pincode) {
