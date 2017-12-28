@@ -338,6 +338,8 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
         self.scanTimer = nil;
     }
     [manager stopScan];
+    //mxm  add  
+    [[BLEDeviceManager sharedManager] stopScan];
     callback(@[[NSNull null]]);
 }
 
@@ -418,8 +420,14 @@ RCT_EXPORT_METHOD(connectBloodPress:(NSString *)peripheralUUID callback:(nonnull
     // Start to read the data.
     NSLog(@"Start to read the data.");
     [[BLEDeviceManager sharedManager] readDataFromDeviceWithIdentifier:deviceInfo[BLEDeviceInfoIdentifierKey] dataObserver:^(BLEDeviceCharacteristicType aCharacteristicType, NSDictionary<NSString *, id> * _Nonnull data) {
-        NSLog(@"%@", [BLEDeviceManager characteristicTypeName:aCharacteristicType]);
         
+        NSLog(@"dataObserver aCharacteristicType -->> %@", data);
+        for (NSString *mykey in [data allKeys]) {
+            if ([mykey isEqualToString:@"batteryLevel"]) {
+                [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":@"batteryLevel"}];
+            }
+        }
+
         dispatch_async(dispatch_get_main_queue(), ^{
             if (aCharacteristicType == BLEDeviceCharacteristicTypeBloodPressureData) {
                 // Output to History
@@ -427,7 +435,7 @@ RCT_EXPORT_METHOD(connectBloodPress:(NSString *)peripheralUUID callback:(nonnull
                 [HistoryData addObject:data];
             }
             
-            //            NSLog(@"%@",aCharacteristicType);
+            NSLog(@"-->> %ld",(long)aCharacteristicType);
             
             [self _updateViewsByCharacteristicType:aCharacteristicType withData:data];
         });
@@ -1131,10 +1139,15 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
             
             // Parse Blood Pressure Measurement
             NSNumber *systolic = data[BLEDeviceBloodPressureDataSystolicKey];
+            /*
             NSString *systolicStr = [NSString stringWithFormat:@"%.1f %@", systolic.floatValue, pressureUnit];
             
             NSNumber *diastolic = data[BLEDeviceBloodPressureDataDiastolicKey];
             NSString *diastolicStr = [NSString stringWithFormat:@"%.1f %@", diastolic.floatValue, pressureUnit];
+            */
+            NSString *systolicStr = [NSString stringWithFormat:@"%.1f", systolic.floatValue];
+            NSNumber *diastolic = data[BLEDeviceBloodPressureDataDiastolicKey];
+            NSString *diastolicStr = [NSString stringWithFormat:@"%.1f", diastolic.floatValue];
             
             NSNumber *meanArterialPressure = data[BLEDeviceBloodPressureDataMeanArterialPressureKey];
             NSString *meanArterialPressureStr = [NSString stringWithFormat:@"%.1f %@", meanArterialPressure.floatValue, pressureUnit];
@@ -1189,7 +1202,8 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
             
             //===========mmmm
             if (pulseRate) {
-                NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f bpm", pulseRate.floatValue];
+//                NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f bpm", pulseRate.floatValue];
+                NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f", pulseRate.floatValue];
                 NSLog(@"PulseRate Data:%@", pulseRateStr);
                 
                 if (timeStamp) {
@@ -1212,7 +1226,7 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
         
             NSLog(@"%@", agg);
             if (hasListeners) {
-                [self sendEventWithName:@"BleManagerBPMDataRcv" body:entry];
+                [self sendEventWithName:@"BleManagerBPMDataRcv" body:@{@"entry":entry}];//body:@{@"entry":entry}  body:entry
             }
             
             break;
@@ -1262,7 +1276,13 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
     // Start to read the data.
     NSLog(@"Start to read the data.");
     [[BLEDeviceManager sharedManager] readDataFromDeviceWithIdentifier:deviceInfo[BLEDeviceInfoIdentifierKey] dataObserver:^(BLEDeviceCharacteristicType aCharacteristicType, NSDictionary<NSString *, id> * _Nonnull data) {
-        NSLog(@"%@", [BLEDeviceManager characteristicTypeName:aCharacteristicType]);
+        NSLog(@"-->> %@", data);
+        
+        for (NSString *mykey in [data allKeys]) {
+            if ([mykey isEqualToString:@"batteryLevel"]) {
+                 [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":@"batteryLevel"}];
+            }
+        }
         
         dispatch_async(dispatch_get_main_queue(), ^{
             if (aCharacteristicType == BLEDeviceCharacteristicTypeBloodPressureData) {

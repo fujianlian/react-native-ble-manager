@@ -91,7 +91,7 @@ class BleManager  {
   
   connectBloodPress(peripheralId) {
     return new Promise((fulfill, reject) => {
-      bleManager.connect(peripheralId, (error) => {
+      bleManager.connectBloodPress(peripheralId, (error) => {
         if (error) {
           reject(error);
         } else {
