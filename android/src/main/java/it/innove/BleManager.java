@@ -128,11 +128,11 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			forceLegacy = options.getBoolean("forceLegacy");
 		}
 
-		if (Build.VERSION.SDK_INT >= LOLLIPOP && !forceLegacy) {
+	/*mxm20171229	if (Build.VERSION.SDK_INT >= LOLLIPOP && !forceLegacy) {
 			scanManager = new LollipopScanManager(reactContext, this);
 		} else {
 			scanManager = new LegacyScanManager(reactContext, this);
-		}
+		}*/
 
         //add=======================
         mBleScanner = new BleScanner(reactContext, this);
@@ -185,7 +185,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		myServiceUUIDs.pushString("1810");//1810  180F
 		myServiceUUIDs.size();
 		serviceUUIDs = myServiceUUIDs;
-		scanManager.scan(myServiceUUIDs, scanSeconds, options, callback);
+		//mxm20171229 scanManager.scan(myServiceUUIDs, scanSeconds, options, callback);
 //		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
 		//============================start=======================================
 
@@ -226,7 +226,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			callback.invoke("Bluetooth not enabled");
 			return;
 		}
-		scanManager.stopScan(callback);
+//mxm20171229		scanManager.stopScan(callback);
 		mBleScanner.stopScan();
 	}
 
