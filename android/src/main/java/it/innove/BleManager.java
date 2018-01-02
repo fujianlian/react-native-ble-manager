@@ -128,12 +128,13 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			forceLegacy = options.getBoolean("forceLegacy");
 		}
 
-	/*mxm20171229	if (Build.VERSION.SDK_INT >= LOLLIPOP && !forceLegacy) {
+	/*mxm20171229
+		if (Build.VERSION.SDK_INT >= LOLLIPOP && !forceLegacy) {
 			scanManager = new LollipopScanManager(reactContext, this);
 		} else {
 			scanManager = new LegacyScanManager(reactContext, this);
-		}*/
-
+		}
+*/
         //add=======================
         mBleScanner = new BleScanner(reactContext, this);
 		LitePalApplication.initialize(reactContext);
@@ -144,6 +145,8 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		callback.invoke();
 		Log.d(LOG_TAG, "BleManager initialized");
 	}
+
+
 
 	@ReactMethod
 	public void enableBluetooth(Callback callback) {
@@ -213,6 +216,39 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
  
 	}
 
+	@ReactMethod
+	public void scanBloodSugar(ReadableArray serviceUUIDs, final int scanSeconds, boolean allowDuplicates, ReadableMap options, Callback callback) {
+		Log.d(LOG_TAG, "scan");
+		if (getBluetoothAdapter() == null) {
+			Log.d(LOG_TAG, "No bluetooth support");
+			callback.invoke("No bluetooth support");
+			return;
+		}
+		if (!getBluetoothAdapter().isEnabled())
+			return;
+
+		for (Iterator<Map.Entry<String, Peripheral>> iterator = peripherals.entrySet().iterator(); iterator.hasNext(); ) {
+			Map.Entry<String, Peripheral> entry = iterator.next();
+			if (!entry.getValue().isConnected()) {
+				iterator.remove();
+			}
+		}
+
+		/**/WritableArray myServiceUUIDs = new  WritableNativeArray();
+		myServiceUUIDs.pushString("180F");//1810  180F
+		myServiceUUIDs.size();
+		serviceUUIDs = myServiceUUIDs;
+//		scanManager.scan(serviceUUIDs, scanSeconds, options, callback);
+		//============================start=======================================
+
+//		this.scanOmron(serviceUUIDs, callback);
+		this.scanOmronBloodSugar(serviceUUIDs, callback);
+
+
+		//============================end=======================================
+
+	}
+
 
 	@ReactMethod
 	public void stopScan(Callback callback) {
@@ -226,7 +262,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			callback.invoke("Bluetooth not enabled");
 			return;
 		}
-//mxm20171229		scanManager.stopScan(callback);
+//mxm20171229 scanManager.stopScan(callback);
 		mBleScanner.stopScan();
 	}
 
@@ -278,7 +314,19 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			}
 		}
 	}
+	@ReactMethod
+	public void connectBloodSugar(String peripheralUUID, Callback callback) {
+		Log.d(LOG_TAG, "Connect to: " + peripheralUUID);
 
+		Peripheral peripheral = retrieveOrCreatePeripheral(peripheralUUID);
+		if (peripheral == null) {
+			callback.invoke("Invalid peripheral uuid");
+			return;
+		}
+		// 126T connect
+ 		this.startBondActivity();
+
+	}
 
 	@ReactMethod
 	public void connect(String peripheralUUID, Callback callback) {
@@ -711,6 +759,29 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		}
 	};
 
+	@ReactMethod
+	public void startBloodSugar(ReadableMap options, Callback callback) {
+		Log.d(LOG_TAG, "start");
+		if (getBluetoothAdapter() == null) {
+			Log.d(LOG_TAG, "No bluetooth support");
+			callback.invoke("No bluetooth support");
+			return;
+		}
+		boolean forceLegacy = false;
+		if (options.hasKey("forceLegacy")) {
+			forceLegacy = options.getBoolean("forceLegacy");
+		}
+
+		//add=======================
+		mBleScanner = new BleScanner(reactContext, this);
+		LitePalApplication.initialize(reactContext);
+		//add=======================end
+		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+		filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+		context.registerReceiver(mReceiver, filter);
+		callback.invoke();
+		Log.d(LOG_TAG, "BleManager initialized");
+	}
 	/**
 	 * Omron
 	 * @param serviceUUIDs
@@ -1551,8 +1622,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		public void onScanComplete(OMRONBLEDevice device) {
 			mHem126tDevice = device;
 
-			List<DeviceInfo> list = DeviceInfo.getDeviceInfo();
-			device.connect(connectionCB, list.get(0).getBgPincode());
+//mxm20180102			List<DeviceInfo> list = DeviceInfo.getDeviceInfo();
+//			device.connect(connectionCB, list.get(0).getBgPincode());
+			device.connect(connectionCB, null);
 		}
 	};
 	//the callback for connect to device
