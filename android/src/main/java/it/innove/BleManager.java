@@ -19,6 +19,7 @@ import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.alibaba.fastjson.JSON;
 import com.facebook.react.bridge.*;
 import com.facebook.react.modules.core.RCTNativeAppEventEmitter;
 
@@ -1697,8 +1698,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 			mLastBgData = getLastBgData(data);
 			WritableMap map = Arguments.createMap();
-			map.putString("state",  mLastBgData.toString());
-			Log.d(LOG_TAG, "state:" + mLastBgData);
+
+			map.putString("entry",  JSON.toJSONString(mLastBgData));
+			Log.d(LOG_TAG, "entry:" + JSON.toJSONString(mLastBgData));
 
 			sendEvent("BleManagerBPMDataRcv", map);
 
