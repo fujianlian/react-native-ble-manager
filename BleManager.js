@@ -101,6 +101,18 @@ class BleManager  {
     });
   }
 
+  connectBloodSugar(peripheralId) {
+    return new Promise((fulfill, reject) => {
+      bleManager.connectBloodSugar(peripheralId, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          fulfill();
+        }
+      });
+    });
+  }
+
 
   createBond(peripheralId) {
     return new Promise((fulfill, reject) => {
@@ -168,7 +180,22 @@ class BleManager  {
       });
     });
   }
-  
+
+  startBloodSugar(options) {
+    return new Promise((fulfill, reject) => {
+      if (options == null) {
+        options = {};
+      }
+      bleManager.startBloodSugar(options, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          fulfill();
+        }
+      });
+    });
+  }
+
   scanAndConnect(serviceUUIDs,peripheralId) {
     return new Promise((fulfill, reject) => {
       bleManager.scanAndConnect(serviceUUIDs, peripheralId, (error) => {
@@ -237,6 +264,38 @@ class BleManager  {
       }
 
       bleManager.onlyScan(serviceUUIDs, seconds, allowDuplicates, scanningOptions, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          fulfill();
+        }
+      });
+    });
+  }
+
+  scanBloodSugar(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
+    return new Promise((fulfill, reject) => {
+      if (allowDuplicates == null) {
+        allowDuplicates = false;
+      }
+
+      // (ANDROID) Match as many advertisement per filter as hw could allow
+      // dependes on current capability and availability of the resources in hw.
+      if(scanningOptions.numberOfMatches == null){
+          scanningOptions.numberOfMatches = 3
+      }
+
+      //(ANDROID) Defaults to MATCH_MODE_AGGRESSIVE
+      if(scanningOptions.matchMode == null){
+          scanningOptions.matchMode = 1
+      }
+
+      //(ANDROID) Defaults to SCAN_MODE_LOW_POWER on android
+      if(scanningOptions.scanMode == null){
+          scanningOptions.scanMode = 0;
+      }
+
+      bleManager.scanBloodSugar(serviceUUIDs, seconds, allowDuplicates, scanningOptions, (error) => {
         if (error) {
           reject(error);
         } else {
