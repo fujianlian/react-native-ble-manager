@@ -1611,6 +1611,14 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 		@Override
 		public void onFailure(OMRONBLEErrMsg errMsg) {
+			//ɨ�賬ʱ
+			Log.d(LOG_TAG, "OMRONBLEErrMsg  miao== errMsg" + errMsg);
+
+			WritableMap map = Arguments.createMap();
+
+			map.putString("state", errMsg.name());//JSON.toJSONString(errMsg)
+			Log.d(LOG_TAG, "state: " + JSON.toJSONString(errMsg));
+			sendEvent("BleManagerDidUpdateState", map);
 			connectToDeviceFailed();
 		}
 
