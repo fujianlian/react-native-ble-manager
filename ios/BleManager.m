@@ -458,51 +458,7 @@ RCT_EXPORT_METHOD(connectBloodPress:(NSString *)peripheralUUID callback:(nonnull
 
 RCT_EXPORT_METHOD(connect:(NSString *)peripheralUUID callback:(nonnull RCTResponseSenderBlock)callback)
 {
- 
-    
     [self connectMachine:peripheralUUID callback:callback];
-    
-    /*
-    
-    */
-    /* old
-    NSLog(@"Connect");
-    CBPeripheral *peripheral = [self findPeripheralByUUID:peripheralUUID];
-    if (peripheral == nil){
-        // Try to retrieve the peripheral
-        NSLog(@"Retrieving peripheral with UUID : %@", peripheralUUID);
-        NSUUID *uuid = [[NSUUID alloc]initWithUUIDString:peripheralUUID];
-        if (uuid != nil) {
-            NSArray<CBPeripheral *> *peripheralArray = [manager retrievePeripheralsWithIdentifiers:@[uuid]];
-            if([peripheralArray count] > 0){
-                peripheral = [peripheralArray objectAtIndex:0];
-                [peripherals addObject:peripheral];
-                NSLog(@"Successfull retrieved peripheral with UUID : %@", peripheralUUID);
-            }
-        } else {
-            NSString *error = [NSString stringWithFormat:@"Wrong UUID format %@", peripheralUUID];
-            callback(@[error, [NSNull null]]);
-            return;
-        }
-    }
-    if (peripheral) {
-        NSLog(@"Connecting to peripheral with UUID : %@", peripheralUUID);
-
-        [connectCallbacks setObject:callback forKey:[peripheral uuidAsString]];
-        [manager connectPeripheral:peripheral options:nil];
-
-    } else {
-        NSString *error = [NSString stringWithFormat:@"Could not find peripheral %@.", peripheralUUID];
-        NSLog(@"%@", error);
-        callback(@[error, [NSNull null]]);
-    }
-     */
-    //=========================
-   // NSLog(@"%@ is selected", deviceInfo[BLEDeviceInfoLocalNameKey]); peripheralUUID
-//     [self _updateViewsByDeviceInfo:self.deviceInfoDictionary["identifier":peripheralUUID];
-
-
-    
     
 }
 #pragma CONNECT
@@ -535,10 +491,11 @@ RCT_EXPORT_METHOD(disconnect:(NSString *)peripheralUUID  callback:(nonnull RCTRe
     }
 }
 
-RCT_EXPORT_METHOD(checkState)
+RCT_EXPORT_METHOD(checkState:(NSDictionary *)options callback:(nonnull RCTResponseSenderBlock)callback)
 {
     if (manager != nil){
         [self centralManagerDidUpdateState:self.manager];
+//      callback(@[]);
     }
 }
 
@@ -1068,25 +1025,6 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
         });
     } completion:^(BLEDeviceCompletionReason aReason) {
         //        [self.navigationController popViewControllerAnimated:YES];
-    }];
-    
-}
-
-- (void)_scanBloodSugerForDevices {
-    NSLog(@"_scanBloodSugerForDevices");
-    //    self.category = '180F';
-    self.category =BLEDeviceCategoryBloodSugar;
-    [self.deviceInfoDictionary removeAllObjects];
-    
-//    [[OMRONBLEDeviceManager getBLEDevManager] scan:^(int progress) { }  success:^(OMRONBLEBGMDevice *device) { }
-//      failture:^(OMRONBLEErrMsg *error) { } ] ;
-    
-    [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.deviceInfoDictionary[deviceInfo[BLEDeviceInfoIdentifierKey]] = deviceInfo;
-        });
-    } completion:^(BLEDeviceCompletionReason aReason) {
-        // [self.navigationController popViewControllerAnimated:YES];
     }];
     
 }
