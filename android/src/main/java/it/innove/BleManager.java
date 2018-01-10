@@ -496,7 +496,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			};
 
 	@ReactMethod
-	public void checkState() {
+	public void checkState(ReadableMap options, Callback callback) {
 		Log.d(LOG_TAG, "checkState");
 
 		BluetoothAdapter adapter = getBluetoothAdapter();
@@ -515,6 +515,8 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		map.putString("state", state);
 		Log.d(LOG_TAG, "state:" + state);
 		sendEvent("BleManagerDidUpdateState", map);
+		callback.invoke( state );
+
 	}
 
 	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -734,11 +736,18 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		@Override
 		public void onScanStarted() {
 			// nop
+			Log.d(LOG_TAG, "onScanStarted  mScanListener: ");
 		}
 
 		@Override
 		public void onScanStartFailure(BleScanner.Reason reason) {
-//			AppLog.e("Start scan failed. reason:" + reason);
+//			Log.d("Start scan failed. reason:" + reason);
+			Log.d(LOG_TAG, "OMRONBLEErrMsg  mScanListener miao== errMsg" + reason);
+			WritableMap map = Arguments.createMap();
+
+			map.putString("state", JSON.toJSONString(reason));//JSON.toJSONString(errMsg)
+			Log.d(LOG_TAG, " mScanListener state: " + JSON.toJSONString(reason));
+			sendEvent("BleManagerDidUpdateState", map);
 //			OnEventListener eventListener = mListenerRef.get();
 //			if (eventListener != null) {
 //				eventListener.onScanStartFailure(reason);
@@ -747,6 +756,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 		@Override
 		public void onScanStopped(@NonNull BleScanner.Reason reason) {
+			Log.d(LOG_TAG, " mScanListener onScanStopped state: " + JSON.toJSONString(reason));
 //			AppLog.i("Scan stopped. reason:" + reason);
 //			OnEventListener eventListener = mListenerRef.get();
 //			if (eventListener != null) {
@@ -757,6 +767,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		@Override
 		public void onScan(@NonNull DiscoverPeripheral discoverPeripheral) {
 			// nop
+			Log.d(LOG_TAG, " mScanListener onScan state: " + JSON.toJSONString(discoverPeripheral));
 		}
 	};
 
