@@ -8,7 +8,7 @@
 #import "BLEDeviceManager.h"
 #import <UIKit/UIKit.h>
 #import <CoreBluetooth/CoreBluetooth.h>
-
+#import "BleManager.h"
 ///---------------------------------------------------------------------------------------
 #pragma mark - Private defines for BLE
 ///---------------------------------------------------------------------------------------
@@ -532,6 +532,9 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
                 });
             }
         };
+        //add start
+        
+        //add end
         
         // Start to scan.
         NSLog(@"Start BLE Scan");
@@ -713,8 +716,16 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
         __weak typeof(self) weakSelf = self;
         ble_device_dispatch_to_internal_queue(^{
             NSLog(@"Start BLE Scan");
+//            [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":@""}];
+
+//            [[BleManager manager] sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":@""}];
+        
             if (weakSelf.scanStartBlock) {
                 weakSelf.scanStartBlock();
+//                 [[BleManager getCentralManager] _scanForDevices];
+                [[BleManager getInstance]  _scanForDevices];
+            } else {
+//                 [[BleManager getInstance]  _scanForDevices];
             }
         });
     }

@@ -7,6 +7,7 @@
 
 #import <Foundation/Foundation.h>
 #import "BLEDeviceDefines.h"
+#import <CoreBluetooth/CoreBluetooth.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -17,6 +18,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface BLEDeviceManager : NSObject
 
 + (BLEDeviceManager *)sharedManager;
+
 
 + (NSString *)deviceManagerStateName:(BLEDeviceManagerState)state;
 + (NSString *)connectionStateName:(BLEDeviceConnectionState)state;
@@ -53,7 +55,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)cancelReadingFromDeviceWithIdentifier:(NSUUID *)identifier;
 
 @property (nonatomic, assign, readonly) BLEDeviceManagerState state;
-
+@property (strong, nonatomic) CBCentralManager *manager;
 @end
 
 NS_ASSUME_NONNULL_END

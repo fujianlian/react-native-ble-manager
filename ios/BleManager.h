@@ -29,6 +29,9 @@
 // For integration with external libraries, advanced use only.
 +(BleManager *)getInstance;
 
-//- (void) ·½·¨
+- _scanBloodPressForDevices;
+
+- _scanForDevices;
+
 
 @end

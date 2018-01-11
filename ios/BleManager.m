@@ -68,7 +68,7 @@ bool hasListeners;
 
 - (NSArray<NSString *> *)supportedEvents
 {
-    return @[@"BleManagerDidUpdateValueForCharacteristic", @"BleManagerStopScan", @"BleManagerDiscoverPeripheral", @"BleManagerConnectPeripheral", @"BleManagerDisconnectPeripheral", @"BleManagerDidUpdateState",  @"BleManagerBPMDataRcv"];
+    return @[@"BleManagerDidUpdateValueForCharacteristic", @"BleManagerStopScan", @"BleManagerDiscoverPeripheral", @"BleManagerConnectPeripheral", @"BleManagerDisconnectPeripheral", @"BleManagerDidUpdateState",  @"BleManagerBPMDataRcv",  @"BleManagerBleState"];
 }
 
 
@@ -292,8 +292,8 @@ RCT_EXPORT_METHOD(start:(NSDictionary *)options callback:(nonnull RCTResponseSen
 RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates options:(nonnull NSDictionary*)scanningOptions callback:(nonnull RCTResponseSenderBlock)callback)
 {
     
-//    [self _scanForDevices];
-    [self _scanBloodPressForDevices];
+// mxm20180110
+//    [self _scanBloodPressForDevices];
     
     //old ===  start
     NSLog(@"scan with timeout %@", timeoutSeconds);
@@ -308,6 +308,9 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSN
         CBUUID *serviceUUID =[CBUUID UUIDWithString:[serviceUUIDStrings objectAtIndex: i]];
         [serviceUUIDs addObject:serviceUUID];
     }
+    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
+    [self _scanBloodPressForDevices];
+    
     /*
     NSMutableArray<CBUUID *> *servicesa = [@[] mutableCopy];
     //添加过滤
@@ -320,7 +323,7 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSN
     /* [manager scanForPeripheralsWithServices:services options:@{CBCentralManagerScanOptionAllowDuplicatesKey: @YES}];
      */
     //serviceUUIDs
-    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
+//    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
     /*
      //时间限制
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -378,7 +381,7 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
 RCT_EXPORT_METHOD(scanBloodPress:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSNumber *)timeoutSeconds allowDuplicates:(BOOL)allowDuplicates options:(nonnull NSDictionary*)scanningOptions callback:(nonnull RCTResponseSenderBlock)callback)
 {
     
-    [self _scanBloodPressForDevices];
+//    [self _scanBloodPressForDevices];
     
     //old ===  start
     NSLog(@"scan with timeout %@", timeoutSeconds);
@@ -903,6 +906,16 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central
 {
     NSString *stateName = [self centralManagerStateToString:central.state];
+    switch (central.state) {
+        case CBCentralManagerStatePoweredOn:
+            NSLog(@"蓝牙已打开,请扫描外设");
+            break;
+        case CBCentralManagerStatePoweredOff:
+            NSLog(@"蓝牙关闭...");
+            break;
+        default:
+            break;
+    }
     if (hasListeners) {
         [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":stateName}];
     }
@@ -992,30 +1005,38 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 
 #pragma mark - Private methods
 - (void)_updateViewsByManagerState:(BLEDeviceManagerState)state {
+    NSString *stateName = [self centralManagerStateToString:state];
     if (state != BLEDeviceManagerStatePoweredOn) {
         NSLog(@"本机的蓝牙未开");
+        [self sendEventWithName:@"BleManagerBleState" body:@{@"state":stateName}];
     }
     else {
         NSLog(@"本机蓝牙已开");
+        [self sendEventWithName:@"BleManagerBleState" body:@{@"state":stateName}];
     }
+    
 }
 
 - (void)_scanForDevices {
     NSLog(@"_scanForDevices");
     
-    [self.deviceInfoDictionary removeAllObjects];
-    [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.deviceInfoDictionary[deviceInfo[BLEDeviceInfoIdentifierKey]] = deviceInfo;
-        });
-    } completion:^(BLEDeviceCompletionReason aReason) {
-//        [self.navigationController popViewControllerAnimated:YES];
-    }];
+    NSMutableDictionary *initOptions = [[NSMutableDictionary alloc] init];
+    NSDictionary *options = nil;
+    BOOL allowDuplicates = NO;
+    if (allowDuplicates){
+        options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:CBCentralManagerScanOptionAllowDuplicatesKey];
+    }
+    [initOptions setObject:[NSNumber numberWithBool:[[options valueForKey:@"showAlert"] boolValue]]
+                    forKey:CBCentralManagerOptionShowPowerAlertKey];
+    manager = [[CBCentralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue() options:initOptions];
+    _sharedManager = manager;
+    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
+//    [self _scanBloodPressForDevices];
 
 }
 
 - (void)_scanBloodPressForDevices {
-    NSLog(@"_scanForDevices");
+    NSLog(@"_scanBloodPressForDevices");
     self.category = BLEDeviceCategoryBloodPressure;
     
     [self.deviceInfoDictionary removeAllObjects];
