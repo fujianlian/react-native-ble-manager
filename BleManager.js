@@ -88,7 +88,7 @@ class BleManager  {
       });
     });
   }
-  
+
   connectBloodPress(peripheralId) {
     return new Promise((fulfill, reject) => {
       bleManager.connectBloodPress(peripheralId, (error) => {
@@ -162,8 +162,20 @@ class BleManager  {
     });
   }
 
-  checkState() {
-    bleManager.checkState();
+  checkState(options) {
+    // bleManager.checkState(); (NSDictionary *)options
+    return new Promise((fulfill, reject) => {
+      if (options == null) {
+        options = {};
+      }
+      bleManager.checkState(options, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          fulfill();
+        }
+      });
+    });
   }
 
   start(options) {
@@ -207,8 +219,8 @@ class BleManager  {
       });
     });
   }
-  
-  
+
+
   scan(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
     return new Promise((fulfill, reject) => {
       if (allowDuplicates == null) {
@@ -240,7 +252,7 @@ class BleManager  {
       });
     });
   }
-  
+
   onlyScan(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
     return new Promise((fulfill, reject) => {
       if (allowDuplicates == null) {
@@ -264,6 +276,38 @@ class BleManager  {
       }
 
       bleManager.onlyScan(serviceUUIDs, seconds, allowDuplicates, scanningOptions, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          fulfill();
+        }
+      });
+    });
+  }
+
+  scanBloodPress(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
+    return new Promise((fulfill, reject) => {
+      if (allowDuplicates == null) {
+        allowDuplicates = false;
+      }
+
+      // (ANDROID) Match as many advertisement per filter as hw could allow
+      // dependes on current capability and availability of the resources in hw.
+      if(scanningOptions.numberOfMatches == null){
+          scanningOptions.numberOfMatches = 3
+      }
+
+      //(ANDROID) Defaults to MATCH_MODE_AGGRESSIVE
+      if(scanningOptions.matchMode == null){
+          scanningOptions.matchMode = 1
+      }
+
+      //(ANDROID) Defaults to SCAN_MODE_LOW_POWER on android
+      if(scanningOptions.scanMode == null){
+          scanningOptions.scanMode = 0;
+      }
+
+      bleManager.scanBloodPress(serviceUUIDs, seconds, allowDuplicates, scanningOptions, (error) => {
         if (error) {
           reject(error);
         } else {
@@ -304,39 +348,7 @@ class BleManager  {
       });
     });
   }
-	
-   scanBloodSugar(serviceUUIDs, seconds, allowDuplicates, scanningOptions={}) {
-    return new Promise((fulfill, reject) => {
-      if (allowDuplicates == null) {
-        allowDuplicates = false;
-      }
 
-      // (ANDROID) Match as many advertisement per filter as hw could allow
-      // dependes on current capability and availability of the resources in hw.
-      if(scanningOptions.numberOfMatches == null){
-          scanningOptions.numberOfMatches = 3
-      }
-
-      //(ANDROID) Defaults to MATCH_MODE_AGGRESSIVE
-      if(scanningOptions.matchMode == null){
-          scanningOptions.matchMode = 1
-      }
-
-      //(ANDROID) Defaults to SCAN_MODE_LOW_POWER on android
-      if(scanningOptions.scanMode == null){
-          scanningOptions.scanMode = 0;
-      }
-
-      bleManager.scanBloodSugar(serviceUUIDs, seconds, allowDuplicates, scanningOptions, (error) => {
-        if (error) {
-          reject(error);
-        } else {
-          fulfill();
-        }
-      });
-    });
-  }	
-	
   stopScan() {
     return new Promise((fulfill, reject) => {
       bleManager.stopScan((error) => {
