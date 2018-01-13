@@ -265,6 +265,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		}
 //mxm20171229 scanManager.stopScan(callback);
 		mBleScanner.stopScan();
+		mRunnableFlag = true;
 	}
 
 	@ReactMethod
@@ -715,6 +716,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
     private BlePeripheral mTargetPeripheral;
     private BleCommunicationExecutor mBleCommunicationExecutor;
     private boolean mIsCtsWritten;
+	private boolean mRunnableFlag = false;
 
 	private final Runnable mScanResultRefreshRunnable = new Runnable() {
 		@Override
@@ -726,9 +728,11 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 
 
+			if(!mRunnableFlag){
+				mHandler.postDelayed(this, mRefreshInterval);
+			}
 
 
-    		mHandler.postDelayed(this, mRefreshInterval);
 		}
 	};
 
