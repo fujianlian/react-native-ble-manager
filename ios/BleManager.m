@@ -352,7 +352,7 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
     self.scanTimer = nil;
     [manager stopScan];
     if (hasListeners) {
-        [self sendEventWithName:@"BleManagerStopScan" body:@{}];
+        [self sendEventWithName:@"BleManagerStopScan" body:@""];
     }
 }
 
@@ -831,6 +831,7 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
     }
 
     if (hasListeners) {
+    
         [self sendEventWithName:@"BleManagerDisconnectPeripheral" body:@{@"peripheral": [peripheral uuidAsString]}];
     }
 }
@@ -1064,14 +1065,12 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 //        label.text = (text ? text : BlankText);
 //        [label sizeToFit];
 //    };
-    if(hasListeners) {
-//         [self sendEventWithName:@"BleManagerDidUpdateState" body:@{@"state":""}];
-    }
+ 
     switch (characteristicType) {
 //        case BLEDeviceConnectionStateConnected:
 //        {
 //            if(hasListeners) {
-//                [self sendEventWithName:@"BleManagerBPMDataRcv" body:@{}];
+//
 //            }
 //            break;
 //        }
