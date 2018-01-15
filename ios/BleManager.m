@@ -308,8 +308,9 @@ RCT_EXPORT_METHOD(scan:(NSArray *)serviceUUIDStrings timeoutSeconds:(nonnull NSN
         CBUUID *serviceUUID =[CBUUID UUIDWithString:[serviceUUIDStrings objectAtIndex: i]];
         [serviceUUIDs addObject:serviceUUID];
     }
-    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
+    
     [self _scanBloodPressForDevices];
+    [manager scanForPeripheralsWithServices:@[[CBUUID UUIDWithString:@"1810"]] options:options];
     
     /*
     NSMutableArray<CBUUID *> *servicesa = [@[] mutableCopy];
@@ -365,7 +366,7 @@ RCT_EXPORT_METHOD(stopScan:(nonnull RCTResponseSenderBlock)callback)
         
     NSLog(@"Discover peripheral: %@", [peripheral name]);
     if (hasListeners) {
-        [self sendEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
+//        [self sendEventWithName:@"BleManagerDiscoverPeripheral" body:[peripheral asDictionary]];
         
         int a = 500;
         NSNumber *intObj = [NSNumber numberWithInt:a];
@@ -407,8 +408,9 @@ RCT_EXPORT_METHOD(connectBloodPress:(NSString *)peripheralUUID callback:(nonnull
     self.deviceInfoSnapshot = self.deviceInfoDictionary.allValues;
     NSDictionary *deviceInfo = [[NSDictionary alloc] init]; //初始化
     for(int i=0;i<self.deviceInfoSnapshot.count; i++){
-        NSString *str = [NSString stringWithFormat:@"%@",[self.deviceInfoSnapshot[i] objectForKey:@"identifier"]];
-        
+//        NSString *str = [NSString stringWithFormat:@"%@",];
+        NSUUID *uuid = [self.deviceInfoSnapshot[i] objectForKey:@"identifier"];
+        NSString *str = [uuid UUIDString];
         if ([str isEqualToString:peripheralUUID]) {
             deviceInfo = self.deviceInfoSnapshot[i];
         }
@@ -1044,6 +1046,14 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
     [[BLEDeviceManager sharedManager] scanForDevicesWithCategories:self.category observer:^(NSDictionary<NSString *, id> * _Nonnull deviceInfo) {
         dispatch_async(dispatch_get_main_queue(), ^{
             self.deviceInfoDictionary[deviceInfo[BLEDeviceInfoIdentifierKey]] = deviceInfo;
+            NSMutableDictionary *mydivuceInfo = [[NSMutableDictionary alloc]init];
+            NSUUID *uuid = [deviceInfo objectForKey:@"identifier"];
+            NSString *uuidStr = [uuid UUIDString];
+            NSString *localName = [deviceInfo objectForKey:@"localName"];
+        
+            [mydivuceInfo setObject:uuidStr forKey:@"id"];
+            [mydivuceInfo setObject:localName forKey:@"name"];
+            [self sendEventWithName:@"BleManagerDiscoverPeripheral" body:mydivuceInfo];
         });
     } completion:^(BLEDeviceCompletionReason aReason) {
         //        [self.navigationController popViewControllerAnimated:YES];
