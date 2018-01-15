@@ -723,7 +723,7 @@ void ble_device_dispatch_to_internal_queue(dispatch_block_t block) {
             if (weakSelf.scanStartBlock) {
                 weakSelf.scanStartBlock();
 //                 [[BleManager getCentralManager] _scanForDevices];
-                [[BleManager getInstance]  _scanForDevices];
+//                [[BleManager getInstance]  _scanForDevices];
             } else {
 //                 [[BleManager getInstance]  _scanForDevices];
             }
