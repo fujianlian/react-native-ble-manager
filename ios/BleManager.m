@@ -1173,7 +1173,7 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
 //                NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f bpm", pulseRate.floatValue];
                 NSString *pulseRateStr = [NSString stringWithFormat:@"%.1f", pulseRate.floatValue];
                 NSLog(@"PulseRate Data:%@", pulseRateStr);
-                
+                 
                 if (timeStamp) {
                     NSInteger timeStampLong = [[NSNumber numberWithDouble:[timeStamp timeIntervalSince1970]] integerValue];
                     timeStampStr = [NSString stringWithFormat:@"%ld", timeStampLong];
