@@ -1175,7 +1175,8 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
                 NSLog(@"PulseRate Data:%@", pulseRateStr);
                 
                 if (timeStamp) {
-                    timeStampStr = [NSString stringWithFormat:@"%@", timeStamp];
+                    NSInteger timeStampLong = [[NSNumber numberWithDouble:[timeStamp timeIntervalSince1970]] integerValue];
+                    timeStampStr = [NSString stringWithFormat:@"%ld", timeStampLong];
                     NSLog(@"Timestamp Data:%@", timeStampStr);
                     entry =[entry stringByAppendingFormat:@"{\"systolic\":\"%@\", \"diastolic\":\"%@\", \"meanArterial\":\"%@\", \"pulseRateStr\":\"%@\", \"timestampData\":\"%@\"}", systolicStr, diastolicStr, meanArterialPressureStr, pulseRateStr, timeStampStr];
                 }
@@ -1279,6 +1280,42 @@ RCT_EXPORT_METHOD(stopNotification:(NSString *)deviceUUID serviceUUID:(NSString*
         //        });
     }];
 
+}
+
+- (NSInteger)timeSwitchTimestamp:(NSString *)formatTime andFormatter:(NSString *)format{
+    
+    
+    
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    
+    [formatter setDateStyle:NSDateFormatterMediumStyle];
+    
+    [formatter setTimeStyle:NSDateFormatterShortStyle];
+    
+    [formatter setDateFormat:format]; //(@"YYYY-MM-dd hh:mm:ss") ----------设置你想要的格式,hh与HH的区别:分别表示12小时制,24小时制
+    
+    
+    
+    NSTimeZone* timeZone = [NSTimeZone timeZoneWithName:@"Asia/Beijing"];
+    
+    [formatter setTimeZone:timeZone];
+    
+    
+    
+    NSDate* date = [formatter dateFromString:formatTime]; //------------将字符串按formatter转成nsdate
+    
+    //时间转时间戳的方法:
+    
+    NSInteger timeSp = [[NSNumber numberWithDouble:[date timeIntervalSince1970]] integerValue];
+    
+    
+    
+    NSLog(@"将某个时间转化成 时间戳&&&&&&&timeSp:%ld",(long)timeSp); //时间戳的值
+    
+    
+    
+    return timeSp;
+    
 }
 
 //===================================miao  end==============
