@@ -1243,12 +1243,6 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
             dateStr = String.format(Locale.US, "%1$04d-%2$02d-%3$02d", year, month, day);
             timeStr = String.format(Locale.US, "%1$02d:%2$02d:%3$02d", hour, min, sec);
             timestampStr = dateStr + " " + timeStr;
-			Date nDate = new Date( year,  month,  day,  hour,  min, sec);
-			if(year == 0 ){
-				nDate = new Date();
-			}
-			timestampStr = String.valueOf(nDate.getTime()/1000);
-
             BleLog.e("Timestamp Data:" + timestampStr);
         }
 //                mTimestampView.setText(timestampStr);
@@ -1638,7 +1632,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 		@Override
 		public void onFailure(OMRONBLEErrMsg errMsg) {
-			//
+			//ɨ�賬ʱ
 			Log.d(LOG_TAG, "OMRONBLEErrMsg  miao== errMsg" + errMsg);
 
 			WritableMap map = Arguments.createMap();
