@@ -33,7 +33,6 @@ repositories {
 dependencies {
 	compile 'com.facebook.react:react-native:[0.30.0,)'
 	compile files('libs/glucosesdk.jar')
-	compile files('libs/gson-2.3.1.jar')
 	compile files('libs/litepal-1.2.1.jar')
 	compile files('libs/fastjson-1.2.44.jar')
 }
