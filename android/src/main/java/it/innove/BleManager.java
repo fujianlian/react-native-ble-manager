@@ -44,10 +44,10 @@ import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.GattStatusCode;
 import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.GattUUID;
 import jp.co.omron.healthcare.samplelibs.ble.blenativewrapper.StateInfo;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+
 import com.omron.ble.DeviceInfo;
 import com.omron.ble.common.OMRONBLEErrMsg;
+import com.omron.ble.device.DeviceType;
 import com.omron.ble.device.OMRONBLEBGMDevice;
 import com.omron.ble.device.OMRONBLEDevice;
 import com.omron.ble.device.OMRONBLEDeviceState;
@@ -81,7 +81,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 	private Callback enableBluetoothCallback;
 	private ScanManager scanManager;
 	private BondRequest bondRequest;
-
+	private OMRONBLEDeviceManager sugerManager;
 	// key is the MAC Address
 	public Map<String, Peripheral> peripherals = new LinkedHashMap<>();
 	// scan session id
@@ -325,8 +325,8 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			callback.invoke("Invalid peripheral uuid");
 			return;
 		}
-		// 126T connect
- 		this.startBondActivity();
+		// 124T connect
+ 		this.startBondActivity(peripheralUUID);
 
 	}
 
@@ -514,7 +514,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 		WritableMap map = Arguments.createMap();
 		map.putString("state", state);
-		Log.d(LOG_TAG, "state:" + state);
+		Log.d(LOG_TAG, "checkState state-lib:" + state);
 		sendEvent("BleManagerDidUpdateState", map);
 		callback.invoke( state );
 
@@ -548,7 +548,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 				WritableMap map = Arguments.createMap();
 				map.putString("state", stringState);
-				Log.d(LOG_TAG, "state: " + stringState);
+				Log.d(LOG_TAG, "mReceiver state-lib: " + stringState);
 				sendEvent("BleManagerDidUpdateState", map);
 
 			} else if (action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)) {
@@ -711,7 +711,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 	private UUID[] mUUIDs = null;
 	private Handler mHandler;
-	private int mRefreshInterval = 500;
+	private int mRefreshInterval = 1000;
     private List<DiscoverPeripheral> scanList = null;
     private BlePeripheral mTargetPeripheral;
     private BleCommunicationExecutor mBleCommunicationExecutor;
@@ -723,7 +723,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		public void run() {
 			List<DiscoverPeripheral> scanResultList = mBleScanner.getScanResults();
             scanList = scanResultList;
-            Log.d(LOG_TAG, "Request scanResultList  miao : " + scanResultList);
+            Log.d(LOG_TAG, this.getClass().getName() +"Request scanResultList  miao : " + scanResultList);
 //			mBleScanAdapter.setList(scanResultList);
 
 
@@ -750,7 +750,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			WritableMap map = Arguments.createMap();
 
 			map.putString("state", JSON.toJSONString(reason));//JSON.toJSONString(errMsg)
-			Log.d(LOG_TAG, " mScanListener state: " + JSON.toJSONString(reason));
+			Log.d(LOG_TAG, " mScanListener state-lib: " + JSON.toJSONString(reason));
 			sendEvent("BleManagerDidUpdateState", map);
 //			OnEventListener eventListener = mListenerRef.get();
 //			if (eventListener != null) {
@@ -761,6 +761,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		@Override
 		public void onScanStopped(@NonNull BleScanner.Reason reason) {
 			Log.d(LOG_TAG, " mScanListener onScanStopped state: " + JSON.toJSONString(reason));
+
 //			AppLog.i("Scan stopped. reason:" + reason);
 //			OnEventListener eventListener = mListenerRef.get();
 //			if (eventListener != null) {
@@ -792,6 +793,10 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		mBleScanner = new BleScanner(reactContext, this);
 		LitePalApplication.initialize(reactContext);
 		//add=======================end
+
+		 this.sugerManager = OMRONBLEDeviceManager
+				.getBLEDevManager(this.context);
+
 		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
 		filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
 		context.registerReceiver(mReceiver, filter);
@@ -1079,7 +1084,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
                     BleLog.e("Connect to detailedState" + detailedState + "(" + mTargetPeripheral.getAddress() + ")");
                     WritableMap map = Arguments.createMap();
                     map.putString("state", detailedState.name());
-                    Log.d(LOG_TAG, "state: " + detailedState);
+                    Log.d(LOG_TAG, "onReceiveMessage state-lib: " + detailedState);
                     sendEvent("BleManagerDidUpdateState", map);
 
                 }
@@ -1601,15 +1606,16 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 	private OMRONBLEDevice mHem126tDevice;
 	private com.omron.ble.model.BGData mLastBgData;
-
-	private void startBondActivity() {
+	private String sugarDeviceUUID ;
+	private void startBondActivity(String peripheralUUID) {
 //        OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
 //                .getBLEDevManager(this.reactContext);
-		OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
-				.getBLEDevManager(this.context);
-		manager.setSyncTime(true);
+//		OMRONBLEDeviceManager manager = OMRONBLEDeviceManager
+//				.getBLEDevManager(this.context);
+		this.sugarDeviceUUID = peripheralUUID;
+		this.sugerManager.setSyncTime(true);
 //		this.onPinCodeInput("892104");
-		manager.scan(mScanDeviceListener);
+		this.sugerManager.scan(mScanDeviceListener, DeviceType.HGM_124T);
 	}
 	private void onPinCodeInput(String pincode) {
 		if (DeviceInfo.isDeviceInfoEmpty()) {
@@ -1638,9 +1644,10 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 			WritableMap map = Arguments.createMap();
 
 			map.putString("state", errMsg.name());//JSON.toJSONString(errMsg)
-			Log.d(LOG_TAG, "state: " + JSON.toJSONString(errMsg));
+			Log.d(LOG_TAG, "mScanDeviceListener state-lib: " + JSON.toJSONString(errMsg));
 			sendEvent("BleManagerDidUpdateState", map);
 			connectToDeviceFailed();
+//			mBleScanner.stopScan();//mxm20180118
 		}
 
 		@Override
@@ -1652,17 +1659,25 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		public void onScanComplete(OMRONBLEDevice device) {
 			mHem126tDevice = device;
 
+
+			BluetoothDevice bleDevice = mHem126tDevice.getDevInfo();
+			if(bleDevice.getAddress().equals(sugarDeviceUUID)){
+				device.connect(connectionCB, null);
+
+			}
 //mxm20180102			List<DeviceInfo> list = DeviceInfo.getDeviceInfo();
 //			device.connect(connectionCB, list.get(0).getBgPincode());
-			device.connect(connectionCB, null);
+
 		}
 	};
 	//the callback for connect to device
 	private OMRONBLEDevice.OMRONBLEDeviceConnectionCB connectionCB = new OMRONBLEDevice.OMRONBLEDeviceConnectionCB() {
 		public void onFailure(OMRONBLEErrMsg errMsg) {
+			Log.d(LOG_TAG, "state-lib:connectionCB" + errMsg.getErrMsg());
 			runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
+					Log.d(LOG_TAG, "state-lib:connectionCB" + "errMsg");
 					mHem126tDevice.disconnect(disconnectionCB);
 					connectToDeviceFailed();
 				}
@@ -1675,7 +1690,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 			WritableMap map = Arguments.createMap();
 			map.putString("state",  fStatus.toString());
-			Log.d(LOG_TAG, "state:" + fStatus);
+			Log.d(LOG_TAG, "connectionCB state-lib:" + fStatus);
 
 //			sendEvent("BleManagerDiscoverPeripheral", map);
 			sendEvent("BleManagerDidUpdateState", map);
@@ -1684,6 +1699,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 					break;
 
 				case STATE_CONNECTED:
+
+					Log.d(LOG_TAG, "state-lib:readData" + fStatus);
+					Log.d(LOG_TAG, "state-lib:readData" + mHem126tDevice);
 					((OMRONBLEBGMDevice) mHem126tDevice).readData(-1, readBGDataCB);
 					break;
 
@@ -1692,6 +1710,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 				case STATE_DISCONNECTED:
 					mHem126tDevice.disconnect(disconnectionCB);
+
 					break;
 
 				default:
@@ -1711,7 +1730,13 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 
 		@Override
 		public void onConnectionStateChange(OMRONBLEDeviceState status) {
+			WritableMap map = Arguments.createMap();
+			map.putString("state",  status.toString());
+			Log.d(LOG_TAG, "disconnectionCB state-lib:" + status);
 
+			sendEvent("BleManagerDidUpdateState", map);
+			mBleScanner.stopScan();//mxm20180118
+			sugerManager.stopScan();
 		}
 	};
 
