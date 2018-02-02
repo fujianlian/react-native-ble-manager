@@ -1615,7 +1615,9 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		this.sugarDeviceUUID = peripheralUUID;
 		this.sugerManager.setSyncTime(true);
 //		this.onPinCodeInput("892104");
-		this.sugerManager.scan(mScanDeviceListener, DeviceType.HGM_124T);
+
+        this.sugerManager.scan(mScanDeviceListener,DeviceType.getHGM124T());
+
 	}
 	private void onPinCodeInput(String pincode) {
 		if (DeviceInfo.isDeviceInfoEmpty()) {
