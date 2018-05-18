@@ -35,4 +35,8 @@ public enum DeviceType {
     public static DeviceType[] getHGM125T(){
         return (new DeviceType[] { DeviceType.HGM_125T, DeviceType.HGM_125T_A });
     }
+
+    public static DeviceType[] getHGM124TAnd125T(){
+        return (new DeviceType[] { DeviceType.HGM_125T, DeviceType.HGM_125T_A , DeviceType.HGM_124T, DeviceType.HGM_124T_A});
+    }
 }
