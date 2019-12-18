@@ -7,7 +7,7 @@ public enum DeviceType {
     HGM_125T("BLEsmart_00090007", 1),
     HGM_125T_A("HGM-125T", 1),
     HGM_126T("BLEsmart_00090008", 1),
-    BLOOD_XXX("BLEsmart_00090008", 2);
+    HGM_126T_A("BLEsmart_00090008", 2);
 
     private String prefix;
     private int type;
@@ -15,9 +15,6 @@ public enum DeviceType {
     private DeviceType(String prefix, int type) {
         this.prefix = prefix;
         this.type = type;
-
-
-
     }
 
     public String getPrefix() {
@@ -38,5 +35,9 @@ public enum DeviceType {
 
     public static DeviceType[] getHGM124TAnd125T(){
         return (new DeviceType[] { DeviceType.HGM_125T, DeviceType.HGM_125T_A , DeviceType.HGM_124T, DeviceType.HGM_124T_A});
+    }
+    
+    public static DeviceType[] getHGMALL(){
+        return (new DeviceType[] { DeviceType.HGM_126T, DeviceType.HGM_126T_A , DeviceType.HGM_125T, DeviceType.HGM_125T_A , DeviceType.HGM_124T, DeviceType.HGM_124T_A});
     }
 }
