@@ -1616,7 +1616,7 @@ public class BleManager extends ReactContextBaseJavaModule implements ActivityEv
 		this.sugerManager.setSyncTime(true);
 //		this.onPinCodeInput("892104");
 
-        this.sugerManager.scan(mScanDeviceListener,DeviceType.getHGM124TAnd125T());
+        this.sugerManager.scan(mScanDeviceListener,DeviceType.getHGMALL());
 
 	}
 	private void onPinCodeInput(String pincode) {
